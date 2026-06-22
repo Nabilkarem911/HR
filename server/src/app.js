@@ -5,7 +5,8 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const { authMiddleware, attachPermissions } = require('./middleware/auth');
+const { authMiddleware } = require('./middleware/auth');
+const { attachPermissions } = require('./middleware/rbac');
 
 // Routes
 const authRoutes = require('./routes/auth');
