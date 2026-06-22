@@ -71,7 +71,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 
 // ── Serve Frontend Static Files ──
-const frontendPath = path.join(__dirname, '..', '..', 'public');
+const frontendPath = path.join(__dirname, '..', 'public');
 app.use(express.static(frontendPath));
 app.use('/assets', express.static(path.join(frontendPath, 'assets')));
 app.use('/pages', express.static(path.join(frontendPath, 'pages')));
