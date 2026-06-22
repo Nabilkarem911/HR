@@ -1,0 +1,592 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="space-y-6">
+    <!-- Welcome Banner & RBAC Context -->
+    <div
+        class="bg-gradient-to-l from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200/50 relative overflow-hidden flex items-center justify-between">
+        <div class="relative z-10 w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-black drop-shadow-sm flex items-center gap-3" id="welcome-message">
+                    <span>مرحباً،</span>
+                    <span id="welcome-name" class="text-indigo-200">...</span>
+                </h1>
+                <p class="text-indigo-100 mt-3 font-medium flex items-center gap-2 text-sm bg-black/10 inline-flex px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/10"
+                    id="rbac-context">
+                    <i class="fa-solid fa-spinner fa-spin"></i> جاري قراءة الصلاحيات...
+                </p>
+            </div>
+            <div id="master-filter-container" class="hidden mt-4 md:mt-0 relative z-10">
+                <select id="master-company-filter"
+                    class="bg-white/20 border border-white/30 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-md appearance-none font-bold">
+                    <option value="all" class="text-slate-800">كل المنشآت (نظرة عامة)</option>
+                </select>
+                <i
+                    class="fa-solid fa-chevron-down absolute left-3 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none text-xs"></i>
+            </div>
+            <div class="hidden md:block opacity-20 transform -translate-x-4 scale-125 pointer-events-none">
+                <i class="fa-solid fa-chart-network text-8xl"></i>
+            </div>
+        </div>
+        <!-- Decorative blobs -->
+        <div
+            class="absolute -top-24 -right-24 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl mix-blend-overlay pointer-events-none">
+        </div>
+        <div
+            class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-400 opacity-20 rounded-full blur-3xl mix-blend-overlay pointer-events-none">
+        </div>
+    </div>
+
+    <!-- Top KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Employees -->
+        <div
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-indigo-300 hover:shadow-md transition-all">
+            <div>
+                <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">إجمالي القوة العاملة</p>
+                <h3 class="text-3xl font-black text-slate-800" id="kpi-emps">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-sm">
+                <i class="fa-solid fa-users"></i>
+            </div>
+        </div>
+
+        <!-- Payroll Estimate -->
+        <div
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-emerald-300 hover:shadow-md transition-all">
+            <div>
+                <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">توقعات الرواتب الأساسية</p>
+                <h3 class="text-3xl font-black text-slate-800 flex items-baseline gap-1" id="kpi-payroll">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all shadow-sm">
+                <i class="fa-solid fa-money-bill-wave"></i>
+            </div>
+        </div>
+
+        <!-- Compliance Health -->
+        <div
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-rose-300 hover:shadow-md transition-all">
+            <div>
+                <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">مؤشر الامتثال (منتهي / حرج)</p>
+                <h3 class="text-3xl font-black text-slate-800" id="kpi-compliance">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white transition-all shadow-sm">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+
+        <!-- Active Branches -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden"
+            id="kpi-branches-card">
+            <div class="relative z-10">
+                <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide" id="kpi-branches-label">الفروع النشطة</p>
+                <h3 class="text-3xl font-black text-slate-800" id="kpi-branches">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-sm relative z-10">
+                <i class="fa-solid fa-code-branch"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Split Layout -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 align-top items-start">
+
+        <!-- Right Column (2/3): Compliance Radar -->
+        <div class="xl:col-span-2 space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col">
+                <div
+                    class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <div class="relative flex h-3 w-3 mr-1">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                        </div>
+                        رادار الامتثال: الوثائق الحرجة
+                    </h3>
+                    <a href="#compliance"
+                        class="text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 transition-colors shadow-sm">فتح
+                        إدارة الامتثال كاملة <i class="fa-solid fa-arrow-left mr-1"></i></a>
+                </div>
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-right text-sm">
+                        <thead class="bg-white border-b border-slate-100 text-slate-400 text-xs">
+                            <tr>
+                                <th class="p-4 font-semibold">الموظف والوثيقة</th>
+                                <th class="p-4 font-semibold">تاريخ الانتهاء</th>
+                                <th class="p-4 font-semibold text-center">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 text-slate-700" id="radar-tbody">
+                            <tr>
+                                <td colspan="3" class="py-16 text-center text-slate-400">
+                                    <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3 block text-slate-300"></i>
+                                    جاري فحص الرادار...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Column (1/3): Chart & Quick Actions -->
+        <div class="space-y-6">
+            <!-- Mini Chart -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <i class="fa-solid fa-chart-donut text-indigo-500"></i> حالة الامتثال الكلية
+                </h3>
+                <div class="relative h-56 flex items-center justify-center">
+                    <canvas id="complianceChart"></canvas>
+                    <div id="chart-empty"
+                        class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10 hidden">
+                        <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                            <i class="fa-solid fa-box-open text-2xl text-slate-300"></i>
+                        </div>
+                        <p class="text-xs text-slate-400 font-bold">لا يوجد بيانات للرسم البياني</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Log (Sensitive Actions) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-rose-500"></i> سجل العمليات الحساسة
+                    </h3>
+                    <span class="text-[11px] text-slate-400 font-bold" id="audit-log-status">جاري التحميل...</span>
+                </div>
+                <div class="space-y-2" id="audit-log-list">
+                    <div class="text-sm text-slate-400 py-4 text-center">
+                        <i class="fa-solid fa-circle-notch fa-spin ml-1"></i> جاري تحميل السجل...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <i class="fa-solid fa-bolt text-amber-500"></i> وصول سريع
+                </h3>
+                <div class="flex flex-col gap-3">
+                    <a href="#employee-profile"
+                        class="flex items-center gap-4 p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-bold transition-all group shadow-sm">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-colors">
+                            <i class="fa-solid fa-user-plus"></i>
+                        </div>
+                        <span>إضافة موظف جديد</span>
+                        <i
+                            class="fa-solid fa-chevron-left mr-auto text-slate-300 group-hover:text-indigo-500 text-xs"></i>
+                    </a>
+
+                    <a href="#payroll"
+                        class="flex items-center gap-4 p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-bold transition-all group shadow-sm">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white group-hover:border-emerald-500 transition-colors">
+                            <i class="fa-solid fa-money-check-dollar"></i>
+                        </div>
+                        <span>تشغيل مسير الرواتب</span>
+                        <i
+                            class="fa-solid fa-chevron-left mr-auto text-slate-300 group-hover:text-emerald-500 text-xs"></i>
+                    </a>
+
+                    <a href="#time-attendance"
+                        class="flex items-center gap-4 p-3 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-bold transition-all group shadow-sm">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white group-hover:border-blue-500 transition-colors">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <span>سجل الحضور والانصراف</span>
+                        <i
+                            class="fa-solid fa-chevron-left mr-auto text-slate-300 group-hover:text-blue-500 text-xs"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let complianceChartInstance = null;
+    let globalUserCompanyCache = null;
+
+    // Orchestrator
+    async function initIntelligenceDashboard() {
+        await hydrateRBACContext();
+
+        // Parallel loads for speed
+        Promise.all([
+            fetchKPIEmployees(),
+            fetchKPIPayroll(),
+            fetchKPIBranches(),
+            fetchComplianceAndRadar(),
+            fetchAuditLogPreview()
+        ]);
+    }
+
+    async function hydrateRBACContext() {
+        if (!window.db) return;
+
+        const nameEl = document.getElementById('welcome-name');
+        const roleEl = document.getElementById('rbac-context');
+
+        try {
+            const { data: { user } } = await window.db.auth.getUser();
+            if (!user) return;
+
+            const { data: profile } = await window.db.from('system_users').select('full_name, role, company_id').eq('id', user.id).single();
+
+            if (profile) {
+                nameEl.innerText = profile.full_name || 'مدير النظام';
+                globalUserCompanyCache = profile.company_id;
+
+                if (profile.role === 'super_admin') {
+                    roleEl.innerHTML = '<i class="fa-solid fa-globe text-emerald-300"></i> صلاحية مطلقة (مدير نظام عام)';
+                    const { data: comps } = await window.db.from('companies').select('id, name');
+                    if (comps) {
+                        const filterSelect = document.getElementById('master-company-filter');
+                        comps.forEach(c => filterSelect.innerHTML += `<option class="text-slate-800" value="${c.id}">${c.name}</option>`);
+                        document.getElementById('master-filter-container').classList.remove('hidden');
+                    }
+                } else if (profile.role === 'branch_manager') {
+                    // Fetch branch name
+                    if (profile.company_id) {
+                        const { data: comp } = await window.db.from('companies').select('name').eq('id', profile.company_id).single();
+                        const bName = comp ? comp.name : '(غير معروف)';
+                        roleEl.innerHTML = `<i class="fa-solid fa-location-dot text-rose-300"></i> البيانات مخصصة لفرع: <span class="font-bold text-white ml-1">${bName}</span>`;
+                    } else {
+                        roleEl.innerHTML = '<i class="fa-solid fa-user-tie"></i> مدير فرع (لا يوجد فرع معين)';
+                    }
+                } else {
+                    roleEl.innerHTML = '<i class="fa-solid fa-user-shield"></i> موظف بصلاحيات محددة';
+                }
+            }
+        } catch (e) {
+            console.error("Context Error", e);
+            nameEl.innerText = 'أهلاً بك';
+            roleEl.innerText = 'صلاحيات غير مقروءة';
+        }
+    }
+
+    // Apply strict RBAC to all DB queries
+    function applyRBAC(queryBuilder, foreignKeyColumn = 'company_id') {
+        // Enforce rigid isolated context for ALL non-super_admins
+        if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+            return queryBuilder.eq(foreignKeyColumn, window.currentUserCompanyId);
+        }
+
+        // For Super Admin, respect the master dropdown if it exists and is not 'all'
+        const filterEl = document.getElementById('master-company-filter');
+        if (filterEl && filterEl.value !== 'all' && window.currentUserRole === 'super_admin') {
+            return queryBuilder.eq(foreignKeyColumn, filterEl.value);
+        }
+
+        return queryBuilder;
+    }
+
+    // 1. KPI: Total Active Employees
+    async function fetchKPIEmployees() {
+        const el = document.getElementById('kpi-emps');
+        try {
+            let q = window.db.from('employees').select('id', { count: 'exact', head: true }).eq('status', 'active');
+            q = q.is('deleted_at', null);
+            q = applyRBAC(q, 'company_id');
+            const { count, error } = await q;
+            if (error) throw error;
+            el.innerText = count || '0';
+        } catch (e) {
+            el.innerText = 'N/A';
+        }
+    }
+
+    // 2. KPI: Payroll Estimation (Sum of Basic Salary)
+    async function fetchKPIPayroll() {
+        const el = document.getElementById('kpi-payroll');
+        try {
+            let q = window.db.from('employees').select('basic_salary').eq('status', 'active');
+            q = q.is('deleted_at', null);
+            q = applyRBAC(q, 'company_id');
+            const { data, error } = await q;
+            if (error) throw error;
+
+            const total = data.reduce((sum, e) => sum + (parseFloat(e.basic_salary) || 0), 0);
+            el.innerHTML = `${total.toLocaleString('en-US', { maximumFractionDigits: 0 })} <span class="text-sm text-slate-400 font-normal">ر.س</span>`;
+        } catch (e) {
+            el.innerText = 'N/A';
+        }
+    }
+
+    // 3. KPI: Active Branches (Or hide if branch manager)
+    async function fetchKPIBranches() {
+        const el = document.getElementById('kpi-branches');
+        const cardLabel = document.getElementById('kpi-branches-label');
+        const card = document.getElementById('kpi-branches-card');
+
+        try {
+            if (window.currentUserRole === 'branch_manager') {
+                // Change card logic to show their assigned branch explicitly
+                cardLabel.innerText = "الفرع الحالي";
+                if (globalUserCompanyCache) {
+                    const { data } = await window.db.from('companies').select('name').eq('id', globalUserCompanyCache).single();
+                    el.innerHTML = `<span class="text-lg">${data ? data.name : '--'}</span>`;
+                } else {
+                    el.innerText = '--';
+                }
+                card.classList.replace('hover:border-blue-300', 'hover:border-slate-300');
+                card.querySelector('.bg-blue-50').classList.replace('text-blue-500', 'text-slate-500');
+                card.querySelector('.bg-blue-50').classList.replace('bg-blue-50', 'bg-slate-50');
+                return;
+            }
+
+            // Super Admin: Count total
+            let { count, error } = await window.db.from('companies').select('id', { count: 'exact', head: true });
+            if (error) throw error;
+            el.innerText = count || '0';
+        } catch (e) {
+            el.innerText = 'N/A';
+        }
+    }
+
+    // 4. Radar Table + Compliance KPI + Doughnut Chart (All derived from one optimized robust fetch)
+    async function fetchComplianceAndRadar() {
+        const tbody = document.getElementById('radar-tbody');
+        const kpiEl = document.getElementById('kpi-compliance');
+
+        try {
+            // Broad robust fetch
+            const { data, error } = await window.db.from('employee_documents')
+                .select('id, doc_type, expiry_date, employees (id, first_name, last_name, company_id)');
+
+            if (error) throw error;
+
+            let records = data || [];
+
+            // Execute local JS filtering for RBAC to guarantee no PostgREST breaks
+            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                records = records.filter(d => d.employees && d.employees.company_id == window.currentUserCompanyId);
+            } else {
+                const filterEl = document.getElementById('master-company-filter');
+                if (filterEl && filterEl.value !== 'all') {
+                    records = records.filter(d => d.employees && d.employees.company_id == filterEl.value);
+                }
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            let countExpired = 0;
+            let countWarning = 0;
+            let countSafe = 0;
+
+            const analyzed = records.map(doc => {
+                const expDate = new Date(doc.expiry_date);
+                const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+
+                let status = 'safe';
+                if (diffDays < 0) {
+                    status = 'expired';
+                    countExpired++;
+                } else if (diffDays <= 60) {
+                    status = 'warning';
+                    countWarning++;
+                } else {
+                    countSafe++;
+                }
+
+                return { ...doc, diffDays, status };
+            });
+
+            // Update KPI 3
+            kpiEl.innerHTML = `<span class="text-rose-500">${countExpired}</span> <span class="text-slate-300 text-2xl font-normal mx-1">/</span> <span class="text-amber-500">${countWarning}</span>`;
+
+            // Draw Chart
+            drawChart(countSafe, countWarning, countExpired);
+
+            // Filter Top Urgent (Only expired or warning)
+            const urgent = analyzed.filter(d => d.status !== 'safe');
+
+            // Sort by most days expired/expiring
+            urgent.sort((a, b) => a.diffDays - b.diffDays);
+
+            // Render Radar (Take top 6)
+            const topUrgent = urgent.slice(0, 6);
+
+            if (topUrgent.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-12 text-center text-slate-400 font-bold bg-slate-50/50 rounded-b-xl border-t border-slate-100">
+                    <i class="fa-solid fa-check-double text-emerald-400 text-3xl mb-2 block"></i> 
+                    الرادار آمن! لا توجد وثائق حرجة للفت الانتباه.
+                </td></tr>`;
+                return;
+            }
+
+            let html = '';
+            topUrgent.forEach(doc => {
+                const empName = doc.employees ? (`${doc.employees.first_name || ''} ${doc.employees.last_name || ''}`).trim() || 'غير معروف' : 'غير معروف';
+
+                let badgeClass = 'bg-rose-50 text-rose-600 border-rose-200';
+                let iconClass = 'fa-xmark text-rose-500';
+                let timeText = Math.abs(doc.diffDays) + ' يوم مضت';
+
+                if (doc.status === 'warning') {
+                    badgeClass = 'bg-amber-50 text-amber-600 border-amber-200';
+                    iconClass = 'fa-triangle-exclamation text-amber-500';
+                    timeText = 'باقي ' + doc.diffDays + ' يوم';
+                }
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 shadow-inner">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm">${empName}</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">${doc.doc_type}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4 font-mono text-slate-600 text-sm">${doc.expiry_date}</td>
+                        <td class="p-4 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border ${badgeClass} shadow-sm whitespace-nowrap">
+                                <i class="fa-solid ${iconClass}"></i> ${timeText}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+        } catch (e) {
+            console.error("Compliance Radar Error", e);
+            kpiEl.innerText = 'Error';
+            tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-center text-rose-500 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> خطأ في التحميل</td></tr>`;
+        }
+    }
+
+    function drawChart(safe, warning, expired) {
+        if (safe === 0 && warning === 0 && expired === 0) {
+            document.getElementById('chart-empty').classList.remove('hidden');
+            return;
+        }
+
+        const ctx = document.getElementById('complianceChart').getContext('2d');
+        if (complianceChartInstance) {
+            complianceChartInstance.destroy();
+        }
+
+        complianceChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['وثائق سارية', 'تجديد قريب', 'منتهية الصلاحية'],
+                datasets: [{
+                    data: [safe, warning, expired],
+                    backgroundColor: [
+                        '#10b981', // emerald-500
+                        '#f59e0b', // amber-500
+                        '#f43f5e'  // rose-500
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { family: "'Tajawal', sans-serif" },
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    async function fetchAuditLogPreview() {
+        const listEl = document.getElementById('audit-log-list');
+        const statusEl = document.getElementById('audit-log-status');
+        if (!listEl || !statusEl || !window.db) return;
+
+        try {
+            // Starter module: expects table `audit_logs` with common fields.
+            let query = window.db
+                .from('audit_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(8);
+
+            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                query = query.eq('company_id', window.currentUserCompanyId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const rows = data || [];
+            statusEl.innerText = rows.length ? `آخر ${rows.length} عملية` : 'لا توجد عمليات';
+
+            if (!rows.length) {
+                listEl.innerHTML = `<div class="text-sm text-slate-400 py-4 text-center">لا توجد سجلات حساسة حتى الآن.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = rows.map((r) => {
+                const action = r.action || r.action_name || 'حدث';
+                const moduleName = r.module || r.module_name || r.entity_type || 'system';
+                const actor = r.actor_name || r.user_name || r.user_email || r.created_by || 'مستخدم';
+                const when = r.created_at ? new Date(r.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                return `
+                    <div class="rounded-xl border border-slate-100 px-3 py-2 bg-slate-50/50">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-xs font-bold text-slate-700">
+                                <span class="text-rose-600">${moduleName}</span> / ${action}
+                            </div>
+                            <div class="text-[11px] text-slate-400 font-mono">${when}</div>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">بواسطة: ${actor}</div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            statusEl.innerText = 'غير متاح';
+            listEl.innerHTML = `
+                <div class="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-3 leading-6">
+                    تعذر تحميل سجل العمليات. تأكد من وجود جدول <span class="font-mono">audit_logs</span> وصلاحيات القراءة.
+                </div>
+            `;
+        }
+    }
+
+    document.getElementById('master-company-filter')?.addEventListener('change', () => {
+        // Re-trigger parallel loads
+        Promise.all([
+            fetchKPIEmployees(),
+            fetchKPIPayroll(),
+            fetchKPIBranches(),
+            fetchComplianceAndRadar(),
+            fetchAuditLogPreview()
+        ]);
+    });
+
+    // Call init
+    initIntelligenceDashboard();
+</script>

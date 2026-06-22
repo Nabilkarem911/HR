@@ -1,0 +1,375 @@
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-car-side text-cyan-500"></i>
+                إدارة السيارات
+            </h2>
+            <p class="text-slate-500 mt-1">إدارة المركبات وربطها بالمنشآت ومتابعة وثائقها (الرخصة، بطاقة التشغيل، التأمين)</p>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <button onclick="openVehicleModal()"
+                class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-plus ml-1"></i> إضافة سيارة
+            </button>
+            <button onclick="openVehicleDocModal()"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-file-circle-plus ml-1"></i> إضافة وثيقة
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+            <p class="text-slate-500 text-sm font-bold">إجمالي السيارات</p>
+            <p id="vehicles-count-total" class="text-3xl font-black text-slate-800 mt-2">0</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+            <p class="text-slate-500 text-sm font-bold">وثائق منتهية</p>
+            <p id="vehicles-count-expired" class="text-3xl font-black text-rose-600 mt-2">0</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+            <p class="text-slate-500 text-sm font-bold">تجديد خلال 60 يوم</p>
+            <p id="vehicles-count-warning" class="text-3xl font-black text-amber-500 mt-2">0</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-bold text-slate-700">سجل السيارات</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                    <tr>
+                        <th class="p-4">اللوحة</th>
+                        <th class="p-4">المركبة</th>
+                        <th class="p-4">المنشأة</th>
+                        <th class="p-4">الحالة</th>
+                        <th class="p-4 text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="vehicles-tbody" class="divide-y divide-slate-50">
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-bold text-slate-700">وثائق السيارات</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                    <tr>
+                        <th class="p-4">السيارة</th>
+                        <th class="p-4">نوع الوثيقة</th>
+                        <th class="p-4">رقم الوثيقة</th>
+                        <th class="p-4">تاريخ الانتهاء</th>
+                        <th class="p-4">الأيام المتبقية</th>
+                        <th class="p-4">الحالة</th>
+                        <th class="p-4 text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody id="vehicle-docs-tbody" class="divide-y divide-slate-50">
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="vehicle-modal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
+        <div class="p-4 bg-cyan-600 text-white font-bold flex items-center justify-between">
+            <span>بيانات السيارة</span>
+            <button onclick="closeVehicleModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="vehicle-form" class="p-5 space-y-4">
+            <input type="hidden" id="vh-id">
+            <div class="grid grid-cols-2 gap-3">
+                <input id="vh-plate" required class="border rounded-lg px-3 py-2" placeholder="رقم اللوحة">
+                <input id="vh-make" class="border rounded-lg px-3 py-2" placeholder="الشركة المصنعة">
+                <input id="vh-model" class="border rounded-lg px-3 py-2" placeholder="الموديل">
+                <input id="vh-year" type="number" class="border rounded-lg px-3 py-2" placeholder="سنة الصنع">
+            </div>
+            <select id="vh-company" required class="w-full border rounded-lg px-3 py-2"></select>
+            <select id="vh-status" class="w-full border rounded-lg px-3 py-2">
+                <option value="active">نشطة</option>
+                <option value="inactive">موقوفة</option>
+                <option value="maintenance">صيانة</option>
+            </select>
+            <div class="text-left">
+                <button id="btn-save-vh" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg font-bold">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="vehicle-doc-modal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
+        <div class="p-4 bg-indigo-600 text-white font-bold flex items-center justify-between">
+            <span>وثيقة سيارة</span>
+            <button onclick="closeVehicleDocModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="vehicle-doc-form" class="p-5 space-y-4">
+            <input type="hidden" id="vh-doc-id">
+            <select id="vh-doc-vehicle" required class="w-full border rounded-lg px-3 py-2"></select>
+            <div class="grid grid-cols-2 gap-3">
+                <input id="vh-doc-type" required class="border rounded-lg px-3 py-2" placeholder="نوع الوثيقة">
+                <input id="vh-doc-number" required class="border rounded-lg px-3 py-2" placeholder="رقم الوثيقة">
+            </div>
+            <input id="vh-doc-expiry" type="date" required class="w-full border rounded-lg px-3 py-2">
+            <div class="text-left">
+                <button id="btn-save-vh-doc" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let vehiclesList = [];
+    let vehicleDocsList = [];
+    let companiesList = [];
+
+    window.openVehicleModal = function() {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'add')) return alert('غير مصرح لك.');
+        document.getElementById('vehicle-modal').classList.remove('hidden');
+        document.getElementById('vehicle-modal').classList.add('flex');
+    }
+    window.closeVehicleModal = function() {
+        document.getElementById('vehicle-modal').classList.add('hidden');
+        document.getElementById('vehicle-modal').classList.remove('flex');
+        document.getElementById('vehicle-form').reset();
+        document.getElementById('vh-id').value = '';
+    }
+    window.openVehicleDocModal = function() {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'add')) return alert('غير مصرح لك.');
+        document.getElementById('vehicle-doc-modal').classList.remove('hidden');
+        document.getElementById('vehicle-doc-modal').classList.add('flex');
+    }
+    window.closeVehicleDocModal = function() {
+        document.getElementById('vehicle-doc-modal').classList.add('hidden');
+        document.getElementById('vehicle-doc-modal').classList.remove('flex');
+        document.getElementById('vehicle-doc-form').reset();
+        document.getElementById('vh-doc-id').value = '';
+    }
+
+    async function loadVehiclesModule() {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'view')) {
+            return alert('غير مصرح لك بعرض صفحة السيارات.');
+        }
+        await loadVehicleCompanies();
+        await loadVehicles();
+        await loadVehicleDocs();
+    }
+
+    async function loadVehicleCompanies() {
+        const { data } = await window.db.from('companies').select('id, name').order('name');
+        companiesList = data || [];
+        const compSel = document.getElementById('vh-company');
+        const vhSel = document.getElementById('vh-doc-vehicle');
+        compSel.innerHTML = '<option value="">-- اختر المنشأة --</option>';
+        vhSel.innerHTML = '<option value="">-- اختر السيارة --</option>';
+        companiesList.forEach(c => {
+            compSel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+    }
+
+    async function loadVehicles() {
+        const tbody = document.getElementById('vehicles-tbody');
+        const canEditVehicles = !window.hasPerm || window.hasPerm('vehicles', 'edit');
+        const canDeleteVehicles = !window.hasPerm || window.hasPerm('vehicles', 'delete');
+        try {
+            const { data, error } = await window.db.from('vehicles')
+                .select('id, plate_number, make, model, year, status, company_id, companies(name)')
+                .order('created_at', { ascending: false });
+            if (error) throw error;
+            vehiclesList = data || [];
+            const vhSel = document.getElementById('vh-doc-vehicle');
+            vhSel.innerHTML = '<option value="">-- اختر السيارة --</option>';
+            vehiclesList.forEach(v => {
+                const label = `${v.plate_number || '-'} - ${v.make || ''} ${v.model || ''}`.trim();
+                vhSel.innerHTML += `<option value="${v.id}">${label}</option>`;
+            });
+            document.getElementById('vehicles-count-total').innerText = vehiclesList.length;
+            if (!vehiclesList.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">لا توجد سيارات مسجلة.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = vehiclesList.map(v => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-mono font-bold">${v.plate_number || '-'}</td>
+                    <td class="p-4">${(v.make || '')} ${(v.model || '')} ${v.year ? '(' + v.year + ')' : ''}</td>
+                    <td class="p-4">${v.companies?.name || '-'}</td>
+                    <td class="p-4">${v.status || '-'}</td>
+                    <td class="p-4 text-center">
+                        ${canEditVehicles ? `<button onclick="editVehicle('${v.id}')" class="text-cyan-600 px-2"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        ${canDeleteVehicles ? `<button onclick="deleteVehicle('${v.id}')" class="text-rose-600 px-2"><i class="fa-solid fa-trash"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-rose-500 font-bold">تعذر تحميل السيارات. تأكد من إنشاء جدول vehicles.</td></tr>';
+        }
+    }
+
+    async function loadVehicleDocs() {
+        const tbody = document.getElementById('vehicle-docs-tbody');
+        const canEditVehicleDocs = !window.hasPerm || window.hasPerm('vehicles', 'edit');
+        const canDeleteVehicleDocs = !window.hasPerm || window.hasPerm('vehicles', 'delete');
+        try {
+            const { data, error } = await window.db.from('vehicle_documents')
+                .select('id, vehicle_id, doc_type, doc_number, expiry_date, vehicles(plate_number, make, model)')
+                .order('expiry_date', { ascending: true });
+            if (error) throw error;
+            vehicleDocsList = data || [];
+            let expired = 0;
+            let warning = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (!vehicleDocsList.length) {
+                document.getElementById('vehicles-count-expired').innerText = '0';
+                document.getElementById('vehicles-count-warning').innerText = '0';
+                tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400">لا توجد وثائق سيارات.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = vehicleDocsList.map(d => {
+                const exp = new Date(d.expiry_date);
+                const diff = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+                let status = '<span class="text-emerald-600 font-bold">سارية</span>';
+                if (diff < 0) {
+                    status = '<span class="text-rose-600 font-bold">منتهية</span>';
+                    expired++;
+                } else if (diff <= 60) {
+                    status = '<span class="text-amber-600 font-bold">تجديد قريب</span>';
+                    warning++;
+                }
+                const vh = d.vehicles;
+                const vhName = vh ? `${vh.plate_number || '-'} - ${(vh.make || '')} ${(vh.model || '')}` : '-';
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4">${vhName}</td>
+                        <td class="p-4">${d.doc_type || '-'}</td>
+                        <td class="p-4 font-mono">${d.doc_number || '-'}</td>
+                        <td class="p-4">${d.expiry_date || '-'}</td>
+                        <td class="p-4 ${diff < 0 ? 'text-rose-600' : 'text-slate-700'} font-bold">${diff} يوم</td>
+                        <td class="p-4">${status}</td>
+                        <td class="p-4 text-center">
+                            ${canEditVehicleDocs ? `<button onclick="editVehicleDoc('${d.id}')" class="text-indigo-600 px-2"><i class="fa-solid fa-pen"></i></button>` : ''}
+                            ${canDeleteVehicleDocs ? `<button onclick="deleteVehicleDoc('${d.id}')" class="text-rose-600 px-2"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('vehicles-count-expired').innerText = expired;
+            document.getElementById('vehicles-count-warning').innerText = warning;
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-rose-500 font-bold">تعذر تحميل الوثائق. تأكد من إنشاء جدول vehicle_documents.</td></tr>';
+        }
+    }
+
+    window.editVehicle = function(id) {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'edit')) return alert('غير مصرح لك.');
+        const v = vehiclesList.find(x => x.id === id);
+        if (!v) return;
+        document.getElementById('vh-id').value = v.id;
+        document.getElementById('vh-plate').value = v.plate_number || '';
+        document.getElementById('vh-make').value = v.make || '';
+        document.getElementById('vh-model').value = v.model || '';
+        document.getElementById('vh-year').value = v.year || '';
+        document.getElementById('vh-company').value = v.company_id || '';
+        document.getElementById('vh-status').value = v.status || 'active';
+        openVehicleModal();
+    };
+
+    window.editVehicleDoc = function(id) {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'edit')) return alert('غير مصرح لك.');
+        const d = vehicleDocsList.find(x => x.id === id);
+        if (!d) return;
+        document.getElementById('vh-doc-id').value = d.id;
+        document.getElementById('vh-doc-vehicle').value = d.vehicle_id || '';
+        document.getElementById('vh-doc-type').value = d.doc_type || '';
+        document.getElementById('vh-doc-number').value = d.doc_number || '';
+        document.getElementById('vh-doc-expiry').value = d.expiry_date || '';
+        openVehicleDocModal();
+    };
+
+    window.deleteVehicle = async function(id) {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'delete')) return alert('غير مصرح لك.');
+        if (!confirm('حذف السيارة؟')) return;
+        await window.db.from('vehicles').delete().eq('id', id);
+        loadVehicles();
+        loadVehicleDocs();
+    };
+
+    window.deleteVehicleDoc = async function(id) {
+        if (window.hasPerm && !window.hasPerm('vehicles', 'delete')) return alert('غير مصرح لك.');
+        if (!confirm('حذف الوثيقة؟')) return;
+        await window.db.from('vehicle_documents').delete().eq('id', id);
+        loadVehicleDocs();
+    };
+
+    document.getElementById('vehicle-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('vh-id').value;
+        const payload = {
+            plate_number: document.getElementById('vh-plate').value.trim(),
+            make: document.getElementById('vh-make').value.trim() || null,
+            model: document.getElementById('vh-model').value.trim() || null,
+            year: parseInt(document.getElementById('vh-year').value || 0) || null,
+            company_id: document.getElementById('vh-company').value,
+            status: document.getElementById('vh-status').value
+        };
+        if (id) {
+            if (window.hasPerm && !window.hasPerm('vehicles', 'edit')) return alert('غير مصرح لك.');
+            await window.db.from('vehicles').update(payload).eq('id', id);
+        } else {
+            if (window.hasPerm && !window.hasPerm('vehicles', 'add')) return alert('غير مصرح لك.');
+            await window.db.from('vehicles').insert([payload]);
+        }
+        closeVehicleModal();
+        loadVehicles();
+    });
+
+    document.getElementById('vehicle-doc-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('vh-doc-id').value;
+        const payload = {
+            vehicle_id: document.getElementById('vh-doc-vehicle').value,
+            doc_type: document.getElementById('vh-doc-type').value.trim(),
+            doc_number: document.getElementById('vh-doc-number').value.trim(),
+            expiry_date: document.getElementById('vh-doc-expiry').value
+        };
+        if (id) {
+            if (window.hasPerm && !window.hasPerm('vehicles', 'edit')) return alert('غير مصرح لك.');
+            await window.db.from('vehicle_documents').update(payload).eq('id', id);
+        } else {
+            if (window.hasPerm && !window.hasPerm('vehicles', 'add')) return alert('غير مصرح لك.');
+            await window.db.from('vehicle_documents').insert([payload]);
+        }
+        closeVehicleDocModal();
+        loadVehicleDocs();
+    });
+
+    loadVehiclesModule();
+
+    setTimeout(() => {
+        const addVehicleBtn = document.querySelector('button[onclick="openVehicleModal()"]');
+        const addDocBtn = document.querySelector('button[onclick="openVehicleDocModal()"]');
+        if (window.hasPerm && !window.hasPerm('vehicles', 'add')) {
+            if (addVehicleBtn) addVehicleBtn.style.display = 'none';
+            if (addDocBtn) addDocBtn.style.display = 'none';
+        }
+    }, 100);
+</script>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>نظام إدارة الموارد البشرية والرواتب</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap"
+        rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Tajawal', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0ea5e9', // Sky 500
+                        secondary: '#475569', // Slate 600
+                        dark: '#0f172a', // Slate 900
+                        light: '#f8fafc', // Slate 50
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body class="bg-light text-slate-800 font-sans">
+
+    <!-- App Container -->
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Sidebar -->
+        <aside class="w-64 bg-dark text-white flex flex-col transition-all duration-300 transform translate-x-0"
+            id="sidebar">
+            <div class="h-16 flex items-center justify-center border-b border-slate-700">
+                <h1 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-primary"></i>
+                    <span>نظام HRMS</span>
+                </h1>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4">
+                <ul class="space-y-1 px-3" id="nav-hr-links">
+                    <li>
+                        <a href="#dashboard"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="dashboard">
+                            <i class="fa-solid fa-house w-5 text-center"></i>
+                            <span>لوحة التحكم</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#companies"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="companies">
+                            <i class="fa-solid fa-building w-5 text-center text-amber-500"></i>
+                            <span>المنشآت والفروع</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#employee-profile"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="employee-profile">
+                            <i class="fa-solid fa-id-card w-5 text-center"></i>
+                            <span>ملف الموظفين</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#time-attendance"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="time-attendance">
+                            <i class="fa-solid fa-clock w-5 text-center"></i>
+                            <span>الحضور والانصراف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#leaves-loans"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="leaves-loans">
+                            <i class="fa-solid fa-file-signature w-5 text-center"></i>
+                            <span>الإجازات والسلف</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#payroll"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="payroll">
+                            <i class="fa-solid fa-money-check-dollar w-5 text-center"></i>
+                            <span>مسير الرواتب</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#letters"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="letters">
+                            <i class="fa-solid fa-file-signature w-5 text-center text-amber-400"></i>
+                            <span>مركز الإصدارات</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#compliance"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="compliance">
+                            <i class="fa-solid fa-shield-halved w-5 text-center text-indigo-400"></i>
+                            <span>الامتثال والوثائق</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#assets"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="assets">
+                            <i class="fa-solid fa-boxes-stacked w-5 text-center text-emerald-400"></i>
+                            <span>العهد والأصول</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#vehicles"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+                            data-page="vehicles">
+                            <i class="fa-solid fa-car-side w-5 text-center text-cyan-400"></i>
+                            <span>السيارات</span>
+                        </a>
+                    </li>
+                    <li class="pt-4 mt-4 border-t border-slate-700">
+                        <a href="#users"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-emerald-400 hover:bg-slate-800 transition-colors"
+                            data-page="users">
+                            <i class="fa-solid fa-user-shield w-5 text-center"></i>
+                            <span>المستخدمين والصلاحيات</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="space-y-1 px-3 hidden" id="nav-ess-links">
+                    <li>
+                        <a href="#ess-dashboard"
+                            class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-indigo-400 hover:bg-slate-800 transition-colors"
+                            data-page="ess-dashboard">
+                            <i class="fa-solid fa-user-tie w-5 text-center"></i>
+                            <span>بوابتي الشخصية</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-slate-700">
+                <button id="logout-btn"
+                    class="flex items-center gap-2 w-full px-3 py-2 text-right rounded-lg text-red-400 hover:bg-slate-800 transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>تسجيل الخروج</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main ContentWrapper -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Header -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm relative z-40 w-full">
+                <button id="toggle-sidebar" class="text-slate-500 hover:text-primary transition-colors text-xl">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                
+                <div class="relative" id="profile-menu-container">
+                    <div class="flex items-center gap-3 cursor-pointer hover:bg-slate-50 p-1.5 rounded-lg transition-colors" onclick="toggleProfileMenu(event)">
+                        <div class="text-left select-none hidden sm:block">
+                            <p class="text-sm font-bold text-slate-800" id="current-user-name">جاري التحميل...</p>
+                            <p class="text-[11px] text-slate-500 text-left font-medium mt-0.5" id="current-user-role">مدير النظام</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-primary/30" id="header-avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-xs text-slate-400 hidden sm:block"></i>
+                    </div>
+
+                    <div id="profile-dropdown" class="absolute left-0 top-full mt-1 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 hidden flex-col overflow-hidden z-50 transform origin-top-left transition-all duration-200 scale-95 opacity-0">
+                        <div class="p-4 bg-slate-50/80 border-b border-slate-100 text-right">
+                            <p class="text-xs text-slate-400 font-bold mb-1">مرحباً بك 👋</p>
+                            <p class="text-sm font-bold text-primary truncate" id="drop-user-name-clone">المدير العام</p>
+                        </div>
+                        <div class="p-2 flex flex-col gap-1">
+                            <a href="#employee-profile" class="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary rounded-lg transition-colors font-medium">
+                                <i class="fa-regular fa-id-card w-4 text-center"></i> ملفي الشخصي
+                            </a>
+                            <a href="#users" class="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-primary rounded-lg transition-colors font-medium">
+                                <i class="fa-solid fa-gears w-4 text-center"></i> إعدادات النظام
+                            </a>
+                        </div>
+                        <div class="p-2 border-t border-slate-100">
+                            <button onclick="topLogout()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-bold">
+                                <i class="fa-solid fa-arrow-right-from-bracket w-4 text-center"></i> تسجيل الخروج
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Page Content -->
+            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50 p-6" id="main-content">
+                <!-- Page contents will be loaded here dynamically -->
+                <div class="flex justify-center items-center h-full">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>window.API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000/api';</script>
+    <script src="assets/js/apiClient.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script>
+        // Profile Dropdown UI Logic
+        function toggleProfileMenu(event) {
+            event.stopPropagation();
+            const menu = document.getElementById('profile-dropdown');
+            
+            // Sync name dynamically just in case
+            const mainName = document.getElementById('current-user-name').innerText;
+            document.getElementById('drop-user-name-clone').innerText = mainName;
+
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                setTimeout(() => {
+                    menu.classList.remove('scale-95', 'opacity-0');
+                    menu.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            } else {
+                menu.classList.remove('scale-100', 'opacity-100');
+                menu.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => { menu.classList.add('hidden'); }, 200);
+            }
+        }
+
+        // Close dropdown when clicking anywhere outside
+        window.addEventListener('click', (e) => {
+            const menu = document.getElementById('profile-dropdown');
+            const container = document.getElementById('profile-menu-container');
+            if (menu && !menu.classList.contains('hidden') && !container.contains(e.target)) {
+                menu.classList.remove('scale-100', 'opacity-100');
+                menu.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => { menu.classList.add('hidden'); }, 200);
+            }
+        });
+
+        // Global Logout Trigger
+        async function topLogout() {
+            if(!confirm('هل أنت متأكد من تسجيل الخروج؟')) return;
+            localStorage.removeItem('ess_session');
+            localStorage.removeItem('hr_auth_token');
+            if (window.db) await window.db.auth.signOut();
+            window.location.hash = '#login';
+            window.location.reload();
+        }
+    </script>
+</body>
+
+</html>

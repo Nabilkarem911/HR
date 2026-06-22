@@ -1,0 +1,519 @@
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-boxes-stacked text-primary"></i>
+                إدارة العُهد والأصول
+            </h2>
+            <p class="text-slate-500 mt-1">تسجيل ومتابعة الأجهزة والمعدات المُسلمة للموظفين</p>
+        </div>
+        <div class="flex gap-3 w-full md:w-auto mt-4 md:mt-0">
+            <select id="filter-assets-company"
+                class="bg-white border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary text-slate-700 shadow-sm w-full md:w-48">
+                <option value="all">كل المنشآت</option>
+            </select>
+            <button onclick="openAssetModal()"
+                class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm whitespace-nowrap">
+                <i class="fa-solid fa-plus rtl-flip"></i>
+                تسليم عهدة جديدة
+            </button>
+        </div>
+    </div>
+
+    <!-- Smart Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Total Assets -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1">إجمالي العُهد المسجلة</p>
+                <h3 class="text-3xl font-black text-slate-800" id="count-total">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-full bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-box-open"></i>
+            </div>
+        </div>
+
+        <!-- Assigned Assets -->
+        <div
+            class="bg-white rounded-2xl p-6 border-l-4 border-l-indigo-500 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1">عُهد في حوزة الموظفين</p>
+                <h3 class="text-3xl font-black text-indigo-500 drop-shadow-sm" id="count-assigned">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div class="w-14 h-14 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-user-tag"></i>
+            </div>
+        </div>
+
+        <!-- Returned Assets -->
+        <div
+            class="bg-white rounded-2xl p-6 border-l-4 border-l-emerald-500 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1">عُهد مسترجعة بالمخزن</p>
+                <h3 class="text-3xl font-black text-emerald-500 drop-shadow-sm" id="count-returned">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800">
+                سجل العُهد
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto min-h-[400px]">
+            <table class="w-full text-right" id="assets-table">
+                <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold text-sm">
+                    <tr>
+                        <th class="p-4">الموظف</th>
+                        <th class="p-4">نوع العهدة</th>
+                        <th class="p-4">تفاصيل العهدة (الاسم / السيريال)</th>
+                        <th class="p-4 text-center">تاريخ التسليم</th>
+                        <th class="p-4 text-center">الحالة</th>
+                        <th class="p-4 w-32 text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 text-slate-700" id="assets-tbody">
+                    <!-- Data injected via JS -->
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>جاري تحميل السجلات...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Assign Asset Modal -->
+<div id="asset-modal" class="fixed inset-0 z-[100] hidden">
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="asset-modal-overlay"
+        onclick="closeAssetModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full scale-95 opacity-0 z-[101]"
+            id="asset-modal-content">
+
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-l from-indigo-600 to-primary px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="text-xl font-bold flex items-center gap-2" id="asset-modal-title">
+                    <i class="fa-solid fa-laptop-medical"></i> <span>تسليم عهدة جديدة</span>
+                </h3>
+                <button type="button" onclick="closeAssetModal()"
+                    class="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-lg w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="asset-form" class="p-6 space-y-5">
+                <input type="hidden" id="asset-id">
+
+                <div class="space-y-4">
+                    <!-- Employee Select -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">الموظف المستلم <span
+                                class="text-red-500">*</span></label>
+                        <select id="asset-emp-id" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm appearance-none bg-slate-50 text-slate-700">
+                            <option value="">-- اختر الموظف --</option>
+                            <!-- Fetched Dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Asset Type -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">تصنيف العهدة <span
+                                class="text-red-500">*</span></label>
+                        <select id="asset-type" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm appearance-none bg-slate-50 text-slate-700">
+                            <option value="">-- اختر التصنيف --</option>
+                            <option value="إلكترونيات">أجهزة وإلكترونيات (لابتوب، جوال)</option>
+                            <option value="مركبات">مركبات وسيارات</option>
+                            <option value="شرائح اتصال">شريحة اتصال / إنترنت</option>
+                            <option value="مفاتيح/بطاقات">بطاقة دخول / مفاتيح</option>
+                            <option value="أخرى">أخرى</option>
+                        </select>
+                    </div>
+
+                    <!-- Asset Details -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">اسم العهدة <span
+                                    class="text-red-500">*</span></label>
+                            <input type="text" id="asset-name" required
+                                class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm"
+                                placeholder="MacBook Pro M2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">السيريال / اللوحة</label>
+                            <input type="text" id="asset-serial" dir="ltr"
+                                class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm text-right"
+                                placeholder="SN-123456">
+                        </div>
+                    </div>
+
+                    <!-- Dates -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">تاريخ التسليم <span
+                                class="text-red-500">*</span></label>
+                        <input type="date" id="asset-date" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeAssetModal()"
+                        class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">
+                        إلغاء
+                    </button>
+                    <button type="submit" id="btn-submit-asset"
+                        class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> <span>تسجيل العهدة</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalAssetsList = [];
+    let globalEmpList = [];
+    let globalCompaniesDict = {};
+
+    // 1. Initializer
+    async function initAssets() {
+        await loadCompanies();
+        await loadEmployees();
+        await loadAssets();
+    }
+
+    // 2. Load Parent Data
+    async function loadCompanies() {
+        try {
+            const { data } = await window.db.from('companies').select('id, name');
+            if (data) {
+                globalCompaniesDict = data.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {});
+
+                // Populate Filter
+                const filterEl = document.getElementById('filter-assets-company');
+                if (filterEl) {
+                    data.forEach(c => {
+                        filterEl.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    });
+                }
+            }
+        } catch (e) { console.error("Error loading companies:", e); }
+    }
+
+    async function loadEmployees() {
+        try {
+            const { data, error } = await window.db.from('employees').select('id, first_name, last_name, company_id').eq('status', 'active').is('deleted_at', null);
+            if (error) throw error;
+
+            globalEmpList = data || [];
+
+            // RBAC Local Dropdown Filter
+            let filteredEmps = globalEmpList;
+            if (window.currentUserCompanyId) {
+                filteredEmps = globalEmpList.filter(e => e.company_id === window.currentUserCompanyId);
+            }
+
+            const empSelect = document.getElementById('asset-emp-id');
+            empSelect.innerHTML = '<option value="">-- اختر الموظف --</option>';
+            filteredEmps.forEach(e => {
+                const empName = (`${e.first_name || ''} ${e.last_name || ''}`).trim() || 'بدون اسم';
+                const compName = globalCompaniesDict[e.company_id] ? ` - ${globalCompaniesDict[e.company_id]}` : '';
+                empSelect.innerHTML += `<option value="${e.id}">${empName}${compName}</option>`;
+            });
+        } catch (e) { console.error("Error loading employees:", e); }
+    }
+
+    // 3. Main Data Load & Rendering
+    async function loadAssets() {
+        const tbody = document.getElementById('assets-tbody');
+        tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>جاري تحديث العُهد...</p></td></tr>`;
+
+        try {
+            // Robust broad query
+            const { data, error } = await window.db.from('employee_assets')
+                .select('*, employees ( id, first_name, last_name, company_id )')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            let records = data || [];
+
+            // Local RBAC Map Array filtering to avoid Join crashes on blank DB
+            if (window.currentUserRole === 'branch_manager' && window.currentUserCompanyId) {
+                records = records.filter(d => d.employees && d.employees.company_id == window.currentUserCompanyId);
+            }
+
+            // Global Filter application
+            const filterVal = document.getElementById('filter-assets-company')?.value;
+            if (filterVal && filterVal !== 'all') {
+                records = records.filter(d => d.employees && String(d.employees.company_id) === String(filterVal));
+            }
+
+            globalAssetsList = records;
+
+            let countTotal = records.length;
+            let countAssigned = 0;
+            let countReturned = 0;
+
+            if (records.length === 0) {
+                document.getElementById('count-total').innerText = 0;
+                document.getElementById('count-assigned').innerText = 0;
+                document.getElementById('count-returned').innerText = 0;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center font-bold text-slate-400"><i class="fa-solid fa-box-open text-4xl mb-3 block opacity-50"></i> لا توجد عُهد مسجلة بعد.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            records.forEach(d => {
+                // Tracking
+                if (d.status === 'assigned') countAssigned++;
+                else if (d.status === 'returned') countReturned++;
+
+                // Employee Details
+                const rawEmpName = d.employees ? (`${d.employees.first_name || ''} ${d.employees.last_name || ''}`.trim() || 'غير محدد') : 'موظف محذوف';
+                const compId = d.employees ? d.employees.company_id : null;
+                const compName = globalCompaniesDict[compId] || '';
+
+                // Asset Type Icon styling
+                let typeIcon = 'fa-box';
+                if (d.asset_type === 'إلكترونيات') typeIcon = 'fa-laptop';
+                else if (d.asset_type === 'مركبات') typeIcon = 'fa-car';
+                else if (d.asset_type === 'شرائح اتصال') typeIcon = 'fa-sim-card';
+                else if (d.asset_type === 'مفاتيح/بطاقات') typeIcon = 'fa-key';
+
+                // Asset Status Logic
+                let badgeClass = 'bg-slate-100 text-slate-600 border-slate-200';
+                let badgeIcon = 'fa-circle-question';
+                let badgeText = d.status || 'مجهول';
+
+                if (d.status === 'assigned') {
+                    badgeClass = 'bg-indigo-100 text-indigo-700 border-indigo-200 shadow-sm';
+                    badgeIcon = 'fa-user-tag';
+                    badgeText = 'في عهدة الموظف';
+                } else if (d.status === 'returned') {
+                    badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                    badgeIcon = 'fa-check';
+                    badgeText = 'مُسترجعة';
+                } else if (d.status === 'damaged' || d.status === 'lost') {
+                    badgeClass = 'bg-rose-100 text-rose-700 border-rose-200';
+                    badgeIcon = 'fa-triangle-exclamation';
+                    badgeText = d.status === 'lost' ? 'مفقودة' : 'تالفة';
+                }
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="p-4">
+                            <p class="font-bold text-slate-800">${rawEmpName}</p>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-building ml-1 opacity-50"></i>${compName}</p>
+                        </td>
+                        <td class="p-4">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-600 text-sm font-semibold">
+                                <i class="fa-solid ${typeIcon} opacity-70"></i> ${d.asset_type || 'غير محدد'}
+                            </span>
+                        </td>
+                        <td class="p-4">
+                            <p class="font-bold text-slate-700">${d.asset_name}</p>
+                            ${d.serial_number ? `<p class="font-mono text-xs text-slate-500 mt-1">${d.serial_number}</p>` : ''}
+                        </td>
+                        <td class="p-4 text-center text-slate-600 font-mono text-sm">${d.assigned_date}</td>
+                        <td class="p-4 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badgeClass}">
+                                <i class="fa-solid ${badgeIcon}"></i> ${badgeText}
+                            </span>
+                            ${d.status === 'returned' && d.returned_date ? `<p class="text-[10px] text-emerald-600 mt-1 font-mono">${d.returned_date}</p>` : ''}
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="flex flex-wrap items-center justify-center gap-1">
+                                ${d.status === 'assigned' ? (
+                                    (window.hasPerm && window.hasPerm('assets', 'edit')) ? `
+                                    <button onclick="quickReturn('${d.id}')" class="px-2 py-1.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-500 hover:text-white transition-colors text-[10px] font-bold border border-emerald-200" title="استرجاع للمخزن">إرجاع</button>
+                                    <button onclick="reportIssue('${d.id}', 'damaged')" class="px-2 py-1.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-500 hover:text-white transition-colors text-[10px] font-bold border border-amber-200" title="تسجيل كتالفة">تالفة</button>
+                                    <button onclick="reportIssue('${d.id}', 'lost')" class="px-2 py-1.5 rounded bg-rose-50 text-rose-700 hover:bg-rose-500 hover:text-white transition-colors text-[10px] font-bold border border-rose-200" title="تسجيل كمفقودة">مفقودة</button>
+                                    ` : `<span class="text-xs text-slate-400"><i class="fa-solid fa-lock"></i> مقفول</span>`
+                                ) : ''}
+                                ${(window.hasPerm && window.hasPerm('assets', 'delete')) ? `
+                                <button onclick="deleteAsset('${d.id}')" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center border border-slate-200" title="حذف بالكامل">
+                                    <i class="fa-solid fa-trash text-sm"></i>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            // Update KPI
+            document.getElementById('count-total').innerText = countTotal;
+            document.getElementById('count-assigned').innerText = countAssigned;
+            document.getElementById('count-returned').innerText = countReturned;
+
+        } catch (e) {
+            console.error("Load Assets Error: ", e);
+            tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center font-bold text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> خطأ في تحميل بيانات العهد</td></tr>`;
+        }
+    }
+
+    // 4. Modal Open/Close (Appended to Body safely)
+    function openAssetModal() {
+        document.body.appendChild(document.getElementById('asset-modal'));
+
+        document.getElementById('asset-form').reset();
+        document.getElementById('asset-id').value = '';
+
+        // Default assignment date to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('asset-date').value = todayStr;
+
+        const modal = document.getElementById('asset-modal');
+        const overlay = document.getElementById('asset-modal-overlay');
+        const content = document.getElementById('asset-modal-content');
+
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        overlay.classList.remove('opacity-0');
+        content.classList.remove('opacity-0', 'scale-95');
+    }
+
+    function closeAssetModal() {
+        const overlay = document.getElementById('asset-modal-overlay');
+        const content = document.getElementById('asset-modal-content');
+
+        overlay.classList.add('opacity-0');
+        content.classList.add('opacity-0', 'scale-95');
+
+        setTimeout(() => {
+            document.getElementById('asset-modal').classList.add('hidden');
+        }, 300);
+    }
+
+    // 5. Submit Form (Assign New Asset)
+    document.getElementById('asset-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (window.hasPerm && !window.hasPerm('assets', 'add')) return alert('Security Block: غير مصرح لك بإضافة عهدة جديدة.');
+        const btn = document.getElementById('btn-submit-asset');
+        const ogHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> توثيق...';
+        btn.disabled = true;
+
+        const recordId = document.getElementById('asset-id').value;
+        const payload = {
+            employee_id: document.getElementById('asset-emp-id').value,
+            asset_type: document.getElementById('asset-type').value,
+            asset_name: document.getElementById('asset-name').value,
+            serial_number: document.getElementById('asset-serial').value || null,
+            assigned_date: document.getElementById('asset-date').value,
+            status: 'assigned'
+        };
+
+        try {
+            let error;
+            if (recordId) {
+                const res = await window.db.from('employee_assets').update(payload).eq('id', recordId);
+                error = res.error;
+            } else {
+                const res = await window.db.from('employee_assets').insert([payload]);
+                error = res.error;
+            }
+
+            if (error) throw error;
+
+            closeAssetModal();
+            loadAssets();
+        } catch (error) {
+            console.error(error);
+            alert("حدث خطأ أثناء حفظ العهدة.");
+        } finally {
+            btn.innerHTML = ogHtml;
+            btn.disabled = false;
+        }
+    });
+
+    // 6. Action: Quick Return Asset
+    async function quickReturn(id) {
+        if (window.hasPerm && !window.hasPerm('assets', 'edit')) return alert('Security Block: غير مصرح لك بتعديل حالة العهدة.');
+        if (!confirm('هل تم استرجاع هذه العهدة فعلياً من الموظف وإدخالها للمستودع؟')) return;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        try {
+            const { error } = await window.db.from('employee_assets')
+                .update({ status: 'returned', returned_date: todayStr })
+                .eq('id', id);
+
+            if (error) throw error;
+            loadAssets();
+        } catch (e) {
+            console.error(e);
+            alert("فشل تحديث حالة العهدة.");
+        }
+    }
+
+    window.reportIssue = async function (id, issueType) {
+        if (window.hasPerm && !window.hasPerm('assets', 'edit')) return alert('Security Block: غير مصرح لك بتعديل حالة العهدة.');
+        const msg = issueType === 'lost' ? 'هل أنت متأكد من تسجيل العهدة كمفقودة؟' : 'هل أنت متأكد من تسجيل العهدة كتالفة؟';
+        if (!confirm(msg)) return;
+        try {
+            const { error } = await window.db.from('employee_assets').update({ status: issueType }).eq('id', id);
+            if (error) throw error;
+            loadAssets();
+        } catch (e) {
+            alert("فشل تحديث حالة العهدة.");
+        }
+    }
+
+    // 7. Action: Delete
+    async function deleteAsset(id) {
+        if (window.hasPerm && !window.hasPerm('assets', 'delete')) return alert('Security Block: غير مصرح لك بالحذف.');
+        if (!confirm('تأكيد: هل تريد حذف السجل بالكامل من النظام؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+        try {
+            const { error } = await window.db.from('employee_assets').delete().eq('id', id);
+            if (error) throw error;
+            loadAssets();
+        } catch (e) {
+            console.error(e);
+            alert("فشل الحذف. يرجى المحاولة لاحقاً.");
+        }
+    }
+
+    // Event Listeners
+    document.getElementById('filter-assets-company')?.addEventListener('change', loadAssets);
+
+    // Boot
+    initAssets();
+
+    // --- ENFORCE MATRIX PERMISSIONS ON GLOBAL ADD BUTTON ---
+    setTimeout(() => {
+        const addAssetBtn = document.querySelector('button[onclick="openAssetModal()"]');
+        if (addAssetBtn && window.hasPerm && !window.hasPerm('assets', 'add')) {
+            addAssetBtn.style.display = 'none';
+        }
+    }, 100);
+</script>

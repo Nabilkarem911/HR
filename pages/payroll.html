@@ -1,0 +1,1432 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<div class="space-y-6">
+    <!-- Header with Global Actions -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+        <div class="relative z-10 w-full md:w-auto">
+            <h2 id="page-main-title" class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fa-solid fa-folder-open text-primary"></i>
+                أرشيف مسيرات الرواتب
+            </h2>
+            <p id="page-sub-title" class="text-slate-500 mt-1 max-w-xl">استعرض الكشوفات السابقة واعتمد النهائية.</p>
+        </div>
+
+        <div
+            class="flex flex-col sm:flex-row gap-3 relative z-10 w-full md:w-auto mt-4 md:mt-0 items-center justify-end">
+            <!-- Used in Archive View -->
+            <select id="archive-filter-company"
+                class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 w-full sm:w-auto">
+                <option value="all">كل المنشآت</option>
+            </select>
+
+            <button onclick="openRuleManager()"
+                class="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-200 transition-colors flex items-center gap-2 font-bold w-full sm:w-auto whitespace-nowrap">
+                <i class="fa-solid fa-scale-balanced"></i> قواعد الرواتب
+            </button>
+
+            <button id="btn-toggle-engine"
+                class="bg-primary text-white px-5 py-2 rounded-lg shadow-sm hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 font-bold w-full sm:w-auto whitespace-nowrap">
+                <i class="fa-solid fa-plus"></i> <span id="toggle-engine-text">تشغيل مسير جديد</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW 1: ARCHIVE CARDS (Default) -->
+    <div id="archive-view-container" class="block">
+        <div id="cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Cards loaded via JS -->
+            <div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                <div
+                    class="animate-spin inline-block w-8 h-8 border-[3px] border-primary border-t-transparent rounded-full mb-3">
+                </div>
+                <p class="text-slate-500 font-medium font-mono text-sm">جاري تنزيل الأرشيف...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: SMART ENGINE TABLE (Hidden initially) -->
+    <div id="engine-view-container"
+        class="hidden bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col font-sans">
+
+        <!-- Engine Configuration Toolbar -->
+        <div id="engine-toolbar"
+            class="p-5 border-b border-slate-100 bg-blue-50/30 flex flex-wrap gap-4 items-center justify-between">
+            <div class="flex flex-wrap gap-2 items-center">
+                <select id="engine-month"
+                    class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 font-bold">
+                    <option value="1">يناير</option>
+                    <option value="2">فبراير</option>
+                    <option value="3">مارس</option>
+                    <option value="4">أبريل</option>
+                    <option value="5" selected>مايو</option>
+                    <option value="6">يونيو</option>
+                    <option value="7">يوليو</option>
+                    <option value="8">أغسطس</option>
+                    <option value="9">سبتمبر</option>
+                    <option value="10">أكتوبر</option>
+                    <option value="11">نوفمبر</option>
+                    <option value="12">ديسمبر</option>
+                </select>
+                <select id="engine-year"
+                    class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 font-bold">
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                </select>
+                <select id="engine-company"
+                    class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-slate-700">
+                    <option value="all">كل المنشآت المدمجة</option>
+                </select>
+                <button onclick="runPayrollEngine()" id="btn-run-engine"
+                    class="bg-primary text-white border border-blue-600 hover:bg-blue-600 px-4 py-2 rounded-lg shadow-sm transition-colors text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-cogs"></i> تشغيل وبناء المسير
+                </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="exportWPS()"
+                    class="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-4 py-2 rounded-lg shadow-sm transition-colors text-sm font-bold flex items-center gap-2 hidden"
+                    id="btn-export-wps">
+                    <i class="fa-solid fa-file-excel"></i> تصدير WPS
+                </button>
+                <button id="btn-save-draft" onclick="savePayrollDraft()"
+                    class="bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200 px-5 py-2 rounded-lg shadow-sm transition-colors text-sm font-bold flex items-center gap-2 hidden">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ كمسودة
+                </button>
+                <button id="btn-final-save" onclick="saveFinalPayroll()"
+                    class="bg-amber-400 text-slate-900 border border-amber-500 hover:bg-amber-500 px-5 py-2 rounded-lg shadow-sm transition-colors text-sm font-bold flex items-center gap-2 hidden">
+                    <i class="fa-solid fa-lock"></i> اعتماد نهائي (قفل المسير)
+                </button>
+            </div>
+        </div>
+
+        <!-- The Payslips Table -->
+        <div class="overflow-x-auto relative min-h-[400px]">
+            <div id="engine-loading-overlay"
+                class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 hidden flex-col items-center justify-center">
+                <div
+                    class="animate-spin inline-block w-10 h-10 border-[4px] border-primary border-t-transparent rounded-full mb-3">
+                </div>
+                <p class="text-primary font-bold text-lg">جاري حساب المسير والمزامنة...</p>
+            </div>
+
+            <table class="w-full text-right" id="payslips-table">
+                <thead class="bg-slate-100 border-b border-slate-200 text-slate-700 text-[13px] sticky top-0 z-0">
+                    <tr>
+                        <th class="px-3 py-4 font-bold w-48 border-r border-slate-200">الموظف / المنشأة</th>
+                        <th class="px-3 py-4 font-bold text-center border-r border-slate-200">الأساسي</th>
+                        <th class="px-3 py-4 font-bold text-center text-emerald-700 border-r border-slate-200"
+                            title="بدلات + إضافي">الاستحقاقات</th>
+                        <th class="px-3 py-4 font-bold text-center text-red-600 border-r border-slate-200"
+                            title="تأمينات + غياب + سلف + تأخير">الاستقطاعات</th>
+                        <th
+                            class="px-2 py-4 font-bold text-center text-emerald-600 bg-emerald-50/30 border-r border-slate-200">
+                            تعديل (مكافأة)</th>
+                        <th class="px-2 py-4 font-bold text-center text-red-600 bg-red-50/30 border-r border-slate-200">
+                            تعديل (خصم)</th>
+                        <th
+                            class="px-3 py-4 font-bold text-center text-slate-900 bg-emerald-100/30 border-r border-slate-200">
+                            الصافي</th>
+                        <th class="px-3 py-4 font-bold text-center border-r border-slate-200 w-16">الحالة</th>
+                        <th class="px-3 py-4 font-bold text-center w-16">PDF</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm" id="payslips-tbody">
+                    <tr>
+                        <td colspan="9" class="text-center py-20 bg-slate-50/30">
+                            <p class="text-slate-400 mb-2"><i
+                                    class="fa-solid fa-server text-4xl mb-3 text-slate-300"></i></p>
+                            <p class="text-slate-500 font-bold text-lg">قم باختيار الشهر والمنشأة ثم اضغط (تشغيل وبناء
+                                المسير).</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SIMPLE PAYSLIP PREVIEW MODAL -->
+<div id="payslip-preview-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[105] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-receipt text-primary"></i> معاينة قسيمة راتب
+            </h3>
+            <button type="button" onclick="closePayslipPreviewModal()"
+                class="text-slate-400 hover:text-rose-500 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-5 space-y-3 text-sm">
+            <div class="text-slate-700 font-bold" id="pv-emp-name">--</div>
+            <div class="text-xs text-slate-500 font-mono" id="pv-period">--</div>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+                <div class="rounded-lg bg-slate-50 p-3 border border-slate-100">الأساسي: <span class="font-mono font-bold" id="pv-basic">0.00</span></div>
+                <div class="rounded-lg bg-emerald-50 p-3 border border-emerald-100 text-emerald-700">البدلات: <span class="font-mono font-bold" id="pv-allow">0.00</span></div>
+                <div class="rounded-lg bg-rose-50 p-3 border border-rose-100 text-rose-700">الخصومات: <span class="font-mono font-bold" id="pv-deduct">0.00</span></div>
+                <div class="rounded-lg bg-indigo-50 p-3 border border-indigo-100 text-indigo-700">الصافي: <span class="font-mono font-bold" id="pv-net">0.00</span></div>
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-slate-100 bg-white flex justify-end gap-2">
+            <button type="button" onclick="closePayslipPreviewModal()"
+                class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors text-sm font-bold">
+                إغلاق
+            </button>
+            <button type="button" id="btn-pv-print"
+                class="px-4 py-2 rounded-lg bg-primary text-white hover:bg-blue-700 transition-colors text-sm font-bold">
+                طباعة PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- RULE MANAGER MODAL -->
+<div id="rule-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i
+                    class="fa-solid fa-scale-balanced text-primary"></i> إدارة قواعد البدلات والاستقطاعات</h3>
+            <button type="button" onclick="closeRuleManager()"
+                class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
+            <!-- Rules List (Left/Right side depending on RTL) -->
+            <div class="w-full md:w-1/2 border-l border-slate-100 overflow-y-auto bg-slate-50/30 p-4">
+                <h4 class="font-bold text-sm text-slate-600 mb-3 border-b border-slate-200 pb-2">القواعد النشطة</h4>
+                <div id="rules-list" class="space-y-2">
+                    <div class="text-center py-10 text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin"></i>
+                        جاري التحميل...</div>
+                </div>
+            </div>
+
+            <!-- Add New Rule Form -->
+            <div class="w-full md:w-1/2 p-5 overflow-y-auto">
+                <h4 class="font-bold text-sm text-slate-600 mb-4 border-b border-slate-200 pb-2">إضافة قاعدة جديدة
+                    عالمية (Global)</h4>
+                <form id="rule-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">اسم القاعدة *</label>
+                        <input type="text" id="rule-name" required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary"
+                            placeholder="مثال: التأمينات الاجتماعية">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">النوع *</label>
+                            <select id="rule-type"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                                <option value="deduction">استقطاع (-)</option>
+                                <option value="allowance">بدل (+)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">طريقة الحساب *</label>
+                            <select id="rule-val-type"
+                                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary">
+                                <option value="percentage">نسبة مئوية من الأساسي %</option>
+                                <option value="fixed">مبلغ مقطوع (ر.س)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">القيمة (رقم فقط) *</label>
+                        <input type="number" step="0.01" min="0" id="rule-value" required
+                            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-left focus:border-primary focus:ring-1 focus:ring-primary"
+                            placeholder="10.00">
+                    </div>
+
+                    <div class="pt-4 mt-2 border-t border-slate-100 flex justify-end">
+                        <button type="submit" id="btn-save-rule"
+                            class="px-5 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> إضافة القاعدة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- HIGH DEFINITION PDF PAYSLIP TEMPLATE -->
+<!-- Rendered strictly off-screen, precisely sized for A4 portrait printing via html2pdf -->
+<div id="hd-pdf-template" class="hidden" dir="rtl"
+    style="width: 210mm; min-height: 297mm; padding: 20mm; background-color: #ffffff; color: #000000; direction: rtl; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-sizing: border-box;">
+
+    <!-- Top Header -->
+    <table
+        style="width: 100%; border-bottom: 3px solid #1e3a8a; margin-bottom: 25px; padding-bottom: 15px; border-collapse: collapse;">
+        <tr>
+            <td style="width: 50%; text-align: right; vertical-align: bottom; padding: 0;">
+                <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #1e3a8a;">كشف راتب موظف</h1>
+                <h2
+                    style="margin: 5px 0 0 0; font-size: 16px; color: #475569; font-weight: normal; direction: ltr; text-align: right;">
+                    PAYSLIP STATEMENT</h2>
+            </td>
+            <td style="width: 50%; text-align: left; vertical-align: bottom; padding: 0;">
+                <div style="font-size: 22px; font-weight: bold; color: #ea580c; white-space: nowrap; overflow: hidden;"
+                    id="pdf-co-name">شركة الاختبار</div>
+                <div style="font-size: 14px; color: #64748b; margin-top: 5px;">دورة الرواتب: <span id="pdf-co-period"
+                        style="font-weight: bold; color: #1e3a8a;"></span></div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Employee Information Block -->
+    <table
+        style="width: 100%; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 25px; border-collapse: collapse;">
+        <tr>
+            <td style="width: 50%; padding: 15px; text-align: right; vertical-align: top;">
+                <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">اسم الموظف / <span
+                        style="direction: ltr; display: inline-block;">Employee Name</span></span>
+                <span style="font-size: 16px; font-weight: bold; color: #0f172a;" id="pdf-emp-name"></span>
+            </td>
+            <td style="width: 50%; padding: 15px; text-align: right; vertical-align: top;">
+                <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">الرقم الوظيفي / <span
+                        style="direction: ltr; display: inline-block;">Emp ID</span></span>
+                <span style="font-size: 16px; font-weight: bold; font-family: monospace; color: #0f172a;"
+                    id="pdf-emp-id"></span>
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 50%; padding: 0 15px 15px 15px; text-align: right; vertical-align: top;">
+                <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">القسم / <span
+                        style="direction: ltr; display: inline-block;">Department</span></span>
+                <span style="font-size: 16px; font-weight: bold; color: #0f172a;">الإدارة العامة</span>
+            </td>
+            <td style="width: 50%; padding: 0 15px 15px 15px; text-align: right; vertical-align: top;">
+                <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">حالة الكشف / <span
+                        style="direction: ltr; display: inline-block;">Status</span></span>
+                <span style="font-size: 16px; font-weight: bold; color: #059669;">معتمد ونهائي</span>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Financial Table -->
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 15px;">
+        <thead>
+            <tr>
+                <th
+                    style="padding: 12px 15px; text-align: right; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8; width: 60%; color: #334155; font-size: 14px;">
+                    بيان الاستحقاق / <span style="direction: ltr; display: inline-block;">Description</span>
+                </th>
+                <th
+                    style="padding: 12px 15px; text-align: center; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-bottom: 2px solid #94a3b8; width: 40%; color: #334155; font-size: 14px;">
+                    المبلغ (ر.س) / <span style="direction: ltr; display: inline-block;">Amount</span>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td
+                    style="padding: 12px 15px; border: 1px solid #cbd5e1; font-weight: bold; color: #0f172a; text-align: right;">
+                    الراتب الأساسي <span style="direction: ltr; display: inline-block;">(Basic Salary)</span></td>
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-size: 16px; font-weight: bold; color: #0f172a;"
+                    id="pdf-tbl-basic">0.00</td>
+            </tr>
+            <tr style="background-color: #f0fdf4;">
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; color: #166534; text-align: right;">إجمالي
+                    البدلات والعمل الإضافي <span style="direction: ltr; display: inline-block;">(Allowances &
+                        Overtime)</span></td>
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-size: 16px; color: #166534;"
+                    id="pdf-tbl-allow">0.00</td>
+            </tr>
+            <tr style="background-color: #f0fdf4;">
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; color: #166534; text-align: right;">تسويات
+                    ومكافآت <span style="direction: ltr; display: inline-block;">(Manual Bonus)</span></td>
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-size: 16px; color: #166534;"
+                    id="pdf-tbl-bonus">0.00</td>
+            </tr>
+            <tr style="background-color: #fef2f2;">
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; color: #991b1b; text-align: right;">إجمالي
+                    الاستقطاعات والغياب <span style="direction: ltr; display: inline-block;">(Deductions &
+                        Absence)</span></td>
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-size: 16px; color: #991b1b;"
+                    id="pdf-tbl-deduct">-0.00</td>
+            </tr>
+            <tr style="background-color: #fef2f2;">
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; color: #991b1b; text-align: right;">تسويات
+                    وخصومات <span style="direction: ltr; display: inline-block;">(Manual Penalty)</span></td>
+                <td style="padding: 12px 15px; border: 1px solid #cbd5e1; text-align: center; font-family: monospace; font-size: 16px; color: #991b1b;"
+                    id="pdf-tbl-penalty">-0.00</td>
+            </tr>
+            <tr>
+                <td
+                    style="padding: 15px; border: 2px solid #1e3a8a; background-color: #e0f2fe; font-size: 18px; font-weight: 900; color: #1e3a8a; border-left: none; text-align: right;">
+                    الصافي الكلي <span style="direction: ltr; display: inline-block;">(Net Salary)</span></td>
+                <td style="padding: 15px; border: 2px solid #1e3a8a; background-color: #e0f2fe; text-align: center; font-family: monospace; font-size: 22px; font-weight: 900; color: #1e3a8a; border-right: none;"
+                    id="pdf-tbl-net">0.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Signatures -->
+    <table style="width: 100%; margin-top: 60px; border-collapse: collapse;">
+        <tr>
+            <td style="width: 50%; text-align: right; vertical-align: top;">
+                <div style="border-bottom: 1px solid #94a3b8; height: 30px; margin-bottom: 15px; width: 60%;"></div>
+                <span style="font-size: 14px; color: #475569; font-weight: bold; display: block;">توقيع الموظف</span>
+                <span
+                    style="font-size: 11px; color: #94a3b8; display: block; direction: ltr; text-align: right;">Employee
+                    Signature</span>
+            </td>
+            <td style="width: 50%; text-align: left; vertical-align: top;">
+                <div
+                    style="border-bottom: 1px solid #94a3b8; height: 30px; margin-bottom: 15px; width: 60%; display: inline-block;">
+                </div><br>
+                <div style="width: 60%; display: inline-block; text-align: center;">
+                    <span style="font-size: 14px; color: #475569; font-weight: bold; display: block;">ختم واعتماد
+                        الإدارة</span>
+                    <span style="font-size: 11px; color: #94a3b8; display: block; direction: ltr;">Management
+                        Approval</span>
+                </div>
+            </td>
+        </tr>
+    </table>
+</div>
+
+
+<script>
+    // System State
+    let isEngineView = false;
+    let currentPayslips = [];
+    let companiesLookup = {};
+    let globalRulesLoaded = [];
+
+    // Core Nodes
+    const archiveView = document.getElementById('archive-view-container');
+    const engineView = document.getElementById('engine-view-container');
+    const btnToggle = document.getElementById('btn-toggle-engine');
+    const btnText = document.getElementById('toggle-engine-text');
+
+    // Engine State Overrides
+    let activeEngineMonthParam = null;
+    let activeEngineYearParam = null;
+    let activeEngineCompParam = null;
+    let previewPayslipIndex = null;
+
+    function canApprovePayrollAction() {
+        if (!window.hasPerm) return true;
+        return window.hasPerm('payroll', 'edit') || window.hasPerm('payroll', 'approve');
+    }
+
+    /* ==========================================================================
+       INITIALIZATION
+    ========================================================================== */
+    async function initPayrollSystem() {
+        if (!window.db) return;
+
+        // Populate Date Drops to current naturally
+        var nDate = new Date();
+        document.getElementById('engine-month').value = nDate.getMonth() + 1;
+        document.getElementById('engine-year').value = nDate.getFullYear();
+
+        // Load Filters
+        try {
+            const { data } = await window.db.from('companies').select('id, name');
+            if (data) {
+                const fArchive = document.getElementById('archive-filter-company');
+                const fEngine = document.getElementById('engine-company');
+                data.forEach(c => {
+                    companiesLookup[c.id] = c.name;
+                    fArchive.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    fEngine.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+            }
+        } catch (e) {
+            console.error("Filter init err:", e);
+        }
+
+        // Start by showing Archive Grid
+        loadArchiveCards();
+
+    // --- ENFORCE MATRIX PERMISSIONS ON BUTTONS ---
+    setTimeout(() => {
+        // 1. Run Engine Button (Needs 'add' permission)
+        const runBtn = document.getElementById('btn-toggle-engine');
+        if (runBtn && window.hasPerm && !window.hasPerm('payroll', 'add')) {
+            runBtn.style.display = 'none';
+        }
+        // 2. Rule Manager Button (Needs 'settings.view' permission)
+        const ruleBtn = document.querySelector('button[onclick="openRuleManager()"]');
+        if (ruleBtn && window.hasPerm && !window.hasPerm('settings', 'view')) {
+            ruleBtn.style.display = 'none';
+        }
+    }, 100);
+    }
+
+    /* ==========================================================================
+       VIEW CONTINUITY (TOGGLE)
+    ========================================================================== */
+    btnToggle.addEventListener('click', () => {
+        isEngineView = !isEngineView;
+        if (isEngineView) {
+            // SHOW ENGINE
+            archiveView.classList.remove('block'); archiveView.classList.add('hidden');
+            engineView.classList.remove('hidden'); engineView.classList.add('flex');
+
+            document.getElementById('page-main-title').innerHTML = '<i class="fa-solid fa-cogs text-primary"></i> محرك الحسابات الجارية';
+            document.getElementById('page-sub-title').innerText = 'تشغيل وتعديل واعتماد الرواتب في الوقت الفعلي.';
+
+            btnToggle.classList.replace('bg-primary', 'bg-slate-200');
+            btnToggle.classList.replace('text-white', 'text-slate-700');
+            btnText.innerText = 'العودة للأرشيف';
+            btnToggle.querySelector('i').className = 'fa-solid fa-arrow-right';
+
+            // Clear table to force user to hit "RUN" on their active choice
+            document.getElementById('payslips-tbody').innerHTML = `
+                <tr><td colspan="9" class="text-center py-20 bg-slate-50/30">
+                    <p class="text-slate-400 mb-2"><i class="fa-solid fa-server text-4xl mb-3 text-slate-300"></i></p>
+                    <p class="text-slate-500 font-bold text-lg">قم باختيار الشهر والمنشأة ثم اضغط (تشغيل وبناء المسير).</p>
+                </td></tr>
+            `;
+            document.getElementById('btn-export-wps').classList.add('hidden');
+            document.getElementById('btn-save-draft').classList.add('hidden');
+            document.getElementById('btn-final-save').classList.add('hidden');
+            currentPayslips = [];
+        } else {
+            // SHOW ARCHIVE
+            engineView.classList.add('hidden'); engineView.classList.remove('flex');
+            archiveView.classList.remove('hidden'); archiveView.classList.add('block');
+
+            document.getElementById('page-main-title').innerHTML = '<i class="fa-solid fa-folder-open text-primary"></i> أرشيف مسيرات الرواتب';
+            document.getElementById('page-sub-title').innerText = 'استعرض الكشوفات السابقة واعتمد النهائية.';
+
+            btnToggle.classList.replace('bg-slate-200', 'bg-primary');
+            btnToggle.classList.replace('text-slate-700', 'text-white');
+            btnText.innerText = 'تشغيل مسير جديد';
+            btnToggle.querySelector('i').className = 'fa-solid fa-plus';
+
+            loadArchiveCards();
+        }
+    });
+
+    /* ==========================================================================
+       ARCHIVE SYSTEM (CARDS)
+    ========================================================================== */
+    async function loadArchiveCards() {
+        if (!window.db) return;
+        const grid = document.getElementById('cards-grid');
+        grid.innerHTML = '<div class="col-span-full text-center py-20"><div class="animate-spin inline-block w-8 h-8 border-[3px] border-primary border-t-transparent rounded-full mb-3"></div></div>';
+
+        const filterComp = document.getElementById('archive-filter-company').value;
+
+        try {
+            // To figure out the cards, we fetch group data by month/year/company. 
+            // In SQL we'd GROUP BY, in Supabase Client we fetch distinct or fetch all basic stats and map in memory.
+            let query = window.db.from('payslips').select('id, month, year, net_salary, status, company_id');
+            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                query = query.eq('company_id', window.currentUserCompanyId);
+            }
+            const { data, error } = await query;
+            if (error) throw error;
+
+            let rawData = data || [];
+            if (filterComp !== 'all') {
+                rawData = rawData.filter(r => r.employees && r.employees.company_id == filterComp);
+            }
+
+            if (rawData.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm"><p class="text-slate-300 mb-2"><i class="fa-solid fa-box-open text-5xl"></i></p><p class="text-slate-500 font-bold text-lg">لا توجد مسيرات مسجلة.</p></div>`;
+                return;
+            }
+
+            // Map data into cards
+            let summary = {}; // Key: "YYYY_MM_CompID"
+            rawData.forEach(r => {
+                const cId = r.company_id || 'unknown';
+                const key = `${r.year}_${r.month}_${cId}`;
+                if (!summary[key]) {
+                    summary[key] = {
+                        month: r.month, year: r.year, company_id: cId,
+                        total_net: 0, count: 0,
+                        is_final: true // Assume true until we see a draft
+                    };
+                }
+                summary[key].total_net += parseFloat(r.net_salary || 0);
+                summary[key].count++;
+                if (r.status === 'draft') summary[key].is_final = false;
+            });
+
+            const sortedKeys = Object.keys(summary).sort().reverse(); // Show newest
+            let html = '';
+
+            sortedKeys.forEach(k => {
+                const s = summary[k];
+                const mStr = String(s.month).padStart(2, '0');
+                const badge = s.is_final
+                    ? '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-[11px] font-bold border border-emerald-200"><i class="fa-solid fa-lock"></i> نهائي</span>'
+                    : '<span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-[11px] font-bold border border-amber-200"><i class="fa-solid fa-pen"></i> مسودة (تحت المراجعة)</span>';
+
+                const compName = companiesLookup[s.company_id] || 'سجل عام';
+
+                html += `
+                    <div onclick="openEngineForExisting(${s.month}, ${s.year}, '${s.company_id}')" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl font-bold group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                                ${badge}
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-xl font-mono">${mStr} - ${s.year}</h3>
+                            <p class="text-amber-600 font-bold text-sm mt-1">${compName}</p>
+                        </div>
+                        <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-end">
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium mb-1">الصافي الكلي</p>
+                                <p class="font-bold text-slate-900 font-mono text-lg">${s.total_net.toFixed(2)} <span class="text-xs text-slate-400 font-sans">ر.س</span></p>
+                            </div>
+                            <div class="text-center">
+                                <span class="block font-bold text-slate-700">${s.count}</span>
+                                <span class="text-[10px] text-slate-400">سجل</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+
+        } catch (e) {
+            console.error("Archive Load Error:", e);
+            grid.innerHTML = `<div class="col-span-full text-center py-20 bg-white rounded-2xl border border-rose-100 shadow-sm"><p class="text-red-500 font-bold">خطأ في الجلب: ${e.message}</p></div>`;
+        }
+    }
+
+    document.getElementById('archive-filter-company').addEventListener('change', loadArchiveCards);
+
+    // Jump from Archive to Engine perfectly synced
+    window.openEngineForExisting = function (m, y, c) {
+        document.getElementById('engine-month').value = m;
+        document.getElementById('engine-year').value = y;
+        document.getElementById('engine-company').value = c;
+        btnToggle.click(); // Switch view safely
+        loadEngineTable(m, y, c); // Load existing DB data without 're-running' logic
+    }
+
+
+    /* ==========================================================================
+       PAYROLL ENGINE (CALCULATION & DB SYNC)
+    ========================================================================== */
+
+    // 1. Action: The User explicitly clicks "Run & Build"
+    window.runPayrollEngine = async function () {
+        // Console Bypass Guard
+        if (window.hasPerm && !window.hasPerm('payroll', 'add')) return alert('Security Block: غير مصرح لك بتشغيل المسير.');
+        const month = document.getElementById('engine-month').value;
+        const year = document.getElementById('engine-year').value;
+        const comp = document.getElementById('engine-company').value;
+
+        // Block running if they don't select a specific company
+        if (comp === 'all') {
+            return alert('يجب اختيار منشأة محددة (فرع محدد) لتشغيل المحرك المالي، لا يمكن تشغيل المحرك بشكل مدمج لجميع الفروع لتفادي الأخطاء.');
+        }
+
+        const overlay = document.getElementById('engine-loading-overlay');
+        overlay.classList.remove('hidden'); overlay.classList.add('flex');
+
+        try {
+            // STEP A: Fetch Payroll Rules independently WITH TRY/CATCH to prevent ".catch()" crash
+            let globalRules = [];
+            try {
+                const rulesResp = await window.db.from('payroll_rules').select('*').eq('is_active', true);
+                if (rulesResp.error) throw rulesResp.error;
+                globalRules = rulesResp.data || [];
+            } catch (ruleErr) {
+                console.warn("Rules table error/missing, proceeding without DB rules.", ruleErr);
+                // We fallback gracefully
+            }
+
+            // STEP B: Validate Existing Final Status
+            // If the month is already Final, we refuse to re-calculate it to protect the ledger.
+            const existCheck = await window.db.from('payslips')
+                .select('status, company_id')
+                .eq('month', month)
+                .eq('year', year)
+                .eq('company_id', comp);
+            if (existCheck.data && existCheck.data.length > 0) {
+                const hasFinal = existCheck.data.some(r => r.status === 'approved' || r.status === 'final');
+                if (hasFinal) {
+                    overlay.classList.add('hidden'); overlay.classList.remove('flex');
+                    return alert('هذا المسير معتمد بشكل نهائي ومقفل. لعرضه الرجاء الدخول من الأرشيف.');
+                }
+            }
+
+            // Fetch Standard Month Days from Settings
+            let standardMonthDays = 30; // Default fallback
+            try {
+                const { data: settings } = await window.db.from('system_settings').select('setting_value').eq('setting_key', 'standard_month_days').single();
+                if (settings && settings.setting_value) {
+                    let parsedDays = parseFloat(settings.setting_value);
+                    // Strict validation to prevent Infinity or NaN propagation
+                    if (!isNaN(parsedDays) && parsedDays > 0) {
+                        standardMonthDays = parsedDays;
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not fetch standard_month_days, using default 30");
+            }
+
+            // STEP C: Sequential Bulletproof Fetching
+            const paddedMonth = `${year}-${String(month).padStart(2, '0')}`;
+
+            // 1. Fetch Employees FIRST
+            const { data: emps, error: empErr } = await window.db
+                .from('employees')
+                .select('id, basic_salary, contract_salary')
+                .eq('status', 'active')
+                .is('deleted_at', null)
+                .or(`company_id.eq.${comp},company_id.is.null`);
+            if (empErr) throw empErr;
+            if (!emps || emps.length === 0) throw new Error("لا يوجد موظفين نشطين في هذه المنشأة لحساب رواتبهم.");
+
+            const empIds = emps.map(e => e.id);
+
+            // Preserve manual adjustments/status from existing slips for same period.
+            const { data: existingPayslips, error: existingPayslipsErr } = await window.db
+                .from('payslips')
+                .select('employee_id, manual_bonus, manual_penalty, notes, status')
+                .eq('month', parseInt(month, 10))
+                .eq('year', parseInt(year, 10));
+            if (existingPayslipsErr) throw existingPayslipsErr;
+            const existingPayslipsMap = new Map((existingPayslips || []).map(p => [String(p.employee_id), p]));
+
+            // 2. Fetch Attendance and Requests strictly by empIds
+            const [attRes, reqsRes] = await Promise.all([
+                window.db.from('monthly_attendance').select('*').eq('month_year', paddedMonth).eq('company_id', comp),
+                window.db.from('employee_requests').select('*').in('employee_id', empIds)
+            ]);
+
+            const mdAtt = attRes.data || [];
+            const allReqs = reqsRes.data || [];
+            let newPayloads = [];
+
+            // STEP D: The Heartbeat Logic Loop
+            for (let emp of emps) {
+                let basic = parseFloat(emp.basic_salary) || 0;
+                let allowance = 0;
+                let deduction = 0;
+
+                // Evaluate Global Rules Loop
+                globalRules.forEach(r => {
+                    let amount = (r.value_type === 'percentage') ? (basic * (parseFloat(r.value) / 100)) : parseFloat(r.value);
+                    if (r.rule_type === 'allowance') allowance += amount;
+                    else if (r.rule_type === 'deduction') deduction += amount;
+                });
+
+                // Analyze Attendance Smart Grid Data (STRICT DAILY RATE LOGIC)
+                let eAtt = mdAtt.find(a => a.emp_id === emp.id);
+                let absenceDays = eAtt ? parseFloat(eAtt.days_absent || 0) : 0;
+
+                // Calculate Daily Rate based on dynamic settings
+                let dailyRate = basic / standardMonthDays;
+                let dayDeductAmt = dailyRate * absenceDays;
+                deduction += dayDeductAmt;
+
+                // Hours are for reporting only. NO automatic financial impact.
+                let otHours = eAtt ? parseFloat(eAtt.hours_overtime || 0) : 0;
+                let lateHours = eAtt ? parseFloat(eAtt.hours_late || 0) : 0;
+
+                // Filter All Requests for Employee
+                const empReqs = allReqs.filter(r => r.employee_id === emp.id && (r.request_type !== 'loan' || (r.status === 'approved' || r.status === 'processed')));
+
+                // Smart Loan Deduction (Respects remaining balance)
+                let lDed = 0;
+                let activeLoans = empReqs.filter(r => r.request_type === 'loan' && (r.auto_deduct === true || r.auto_deduct === null) && (parseFloat(r.paid_amount || 0) < parseFloat(r.amount)));
+
+                activeLoans.forEach(loan => {
+                    let remaining = parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0);
+                    let monthDed = parseFloat(loan.monthly_deduction || loan.amount || 0);
+                    // Never deduct more than what is remaining
+                    lDed += Math.min(monthDed, remaining);
+                });
+                deduction += lDed;
+
+                // Analyze Unpaid Approved Leaves
+                let lvObjArr = empReqs.filter(r => r.request_type === 'leave' && (r.is_paid === false || r.is_paid === null));
+                let totalUnpaidDays = 0;
+
+                lvObjArr.forEach(lv => {
+                    let d = parseInt(lv.total_days || 0);
+                    if (!d && lv.start_date && lv.end_date) {
+                        d = Math.ceil((new Date(lv.end_date) - new Date(lv.start_date)) / (1000 * 3600 * 24)) + 1;
+                    }
+                    totalUnpaidDays += d;
+                });
+
+                deduction += (totalUnpaidDays * dailyRate); // Dynamically respects standardMonthDays instead of hardcoded 30
+
+                const existingSlip = existingPayslipsMap.get(String(emp.id));
+                const manualBonus = parseFloat(existingSlip?.manual_bonus) || 0;
+                const manualPenalty = parseFloat(existingSlip?.manual_penalty) || 0;
+                const notes = existingSlip?.notes || '';
+                const status = existingSlip?.status || 'draft';
+
+                let net = (basic + allowance + manualBonus) - (deduction + manualPenalty);
+                if (net < 0) net = 0;
+
+                newPayloads.push({
+                    employee_id: emp.id,
+                    month: parseInt(month),
+                    year: parseInt(year),
+                    basic_salary: basic,
+                    total_allowances: allowance,
+                    total_deductions: deduction,
+                    manual_bonus: manualBonus,
+                    manual_penalty: manualPenalty,
+                    notes: notes,
+                    net_salary: net,
+                    status: status
+                });
+            }
+
+            // STEP E: Transaction (Delete existing drafts & Insert fresh calculation)
+            if (empIds.length > 0) {
+                await window.db.from('payslips').delete().eq('month', month).eq('year', year).in('employee_id', empIds).eq('status', 'draft');
+            }
+
+            const { error: insErr } = await window.db.from('payslips').insert(newPayloads);
+            if (insErr) throw insErr;
+
+            // Render
+            loadEngineTable(month, year, comp);
+
+        } catch (e) {
+            console.error("Engine Crash:", e);
+            alert(`خطأ في المحرك: ${e.message}`);
+            overlay.classList.add('hidden'); overlay.classList.remove('flex');
+        }
+    }
+
+
+    // 2. Load the Table directly from DB
+    async function loadEngineTable(month, year, comp) {
+        const tbody = document.getElementById('payslips-tbody');
+        const overlay = document.getElementById('engine-loading-overlay');
+        overlay.classList.remove('hidden'); overlay.classList.add('flex');
+
+        const monthNum = parseInt(month, 10);
+        const yearNum = parseInt(year, 10);
+
+        /** Same branch logic as runPayrollEngine: شركة محددة أو عام، مع تضمين من ليس لهم فرع */
+        function employeeMatchesCompany(emp, c) {
+            if (!emp) return false;
+            if (!c || c === 'all') return true;
+            const ec = emp.company_id;
+            if (ec == null || ec === '') return true;
+            return String(ec) === String(c);
+        }
+
+        try {
+            const { data, error } = await window.db.from('payslips')
+                .select(`
+                    *,
+                    employees (
+                        first_name,
+                        last_name,
+                        contract_salary,
+                        company_id,
+                        basic_salary,
+                        status
+                    )
+                `)
+                .eq('month', monthNum)
+                .eq('year', yearNum);
+
+            if (error) throw error;
+
+            const rawRows = data || [];
+            let finalData = rawRows.filter(p => {
+                if (!p.employees) return false;
+                if (p.employees.status !== 'active') return false;
+                return employeeMatchesCompany(p.employees, comp);
+            });
+
+            if (finalData.length === 0) {
+                let empQuery = window.db
+                    .from('employees')
+                    .select('id, first_name, last_name, contract_salary, basic_salary, company_id, status')
+                    .eq('status', 'active')
+                    .is('deleted_at', null);
+                if (comp && comp !== 'all') {
+                    empQuery = empQuery.or(`company_id.eq.${comp},company_id.is.null`);
+                }
+                const { data: emps, error: empErr } = await empQuery;
+                if (empErr) throw empErr;
+                const list = (emps || []).filter(e => employeeMatchesCompany(e, comp));
+                finalData = list.map(e => {
+                    const basic = parseFloat(e.basic_salary) || 0;
+                    return {
+                        id: null,
+                        _placeholder: true,
+                        employee_id: e.id,
+                        month: monthNum,
+                        year: yearNum,
+                        basic_salary: basic,
+                        total_allowances: 0,
+                        total_deductions: 0,
+                        manual_bonus: 0,
+                        manual_penalty: 0,
+                        net_salary: basic,
+                        status: 'draft',
+                        employees: {
+                            first_name: e.first_name,
+                            last_name: e.last_name,
+                            contract_salary: e.contract_salary,
+                            company_id: e.company_id,
+                            basic_salary: e.basic_salary,
+                            status: e.status
+                        }
+                    };
+                });
+            }
+
+            currentPayslips = finalData;
+
+            if (currentPayslips.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-20 text-slate-500 font-bold bg-slate-50/50">لا يوجد موظفون نشطون مطابقون لهذا الفرع.</td></tr>`;
+                document.getElementById('btn-export-wps').classList.add('hidden');
+                document.getElementById('btn-save-draft').classList.add('hidden');
+                document.getElementById('btn-final-save').classList.add('hidden');
+                overlay.classList.add('hidden'); overlay.classList.remove('flex');
+                return;
+            }
+
+            const isLocked = currentPayslips.some(r => r.id && (r.status === 'approved' || r.status === 'final'));
+            const hasRealPayslips = currentPayslips.some(r => r.id);
+            const hasApprovableDrafts = currentPayslips.some(r => r.id && r.status === 'draft');
+
+            if (hasRealPayslips) {
+                document.getElementById('btn-export-wps').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-export-wps').classList.add('hidden');
+            }
+
+            if (isLocked || !canApprovePayrollAction() || !hasApprovableDrafts) {
+                document.getElementById('btn-final-save').classList.add('hidden');
+            } else {
+                document.getElementById('btn-final-save').classList.remove('hidden');
+            }
+            if (isLocked || !hasApprovableDrafts) {
+                document.getElementById('btn-save-draft').classList.add('hidden');
+            } else {
+                document.getElementById('btn-save-draft').classList.remove('hidden');
+            }
+
+            renderPayslipsTable(isLocked);
+
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 bg-red-50 text-red-600 font-bold">حدث خطأ: ${e.message}</td></tr>`;
+        } finally {
+            overlay.classList.add('hidden'); overlay.classList.remove('flex');
+        }
+    }
+
+
+    function renderPayslipsTable(viewIsLocked) {
+        const tbody = document.getElementById('payslips-tbody');
+        let html = '';
+
+        const maskData = window.hasPerm && window.hasPerm('payroll', 'hide_net');
+        const canApprove = canApprovePayrollAction();
+        currentPayslips.forEach((p, index) => {
+            const isPlaceholder = p._placeholder === true || !p.id;
+            const isDraft = (p.status === 'draft');
+            const canPreviewPrint = !isDraft;
+            const disableInput = (!isDraft || viewIsLocked || isPlaceholder) ? 'disabled' : '';
+            const bgClass = (!isDraft || viewIsLocked || isPlaceholder) ? 'bg-transparent border-transparent text-slate-400' : 'bg-white border-slate-300 shadow-sm';
+
+            const badge = isPlaceholder
+                ? '<span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-bold border border-slate-200">بانتظار التشغيل</span>'
+                : (isDraft
+                    ? '<span class="px-2 py-1 bg-amber-100/50 text-amber-700 rounded text-xs font-bold border border-amber-200">مسودة</span>'
+                    : '<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs font-bold border border-emerald-200"><i class="fa-solid fa-lock"></i> نهائي</span>');
+
+            html += `
+                <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors" data-index="${index}">
+                    <td class="px-3 py-4 border-r border-slate-200 bg-white">
+                        <div class="font-bold text-slate-800 text-[13px] whitespace-nowrap">${p.employees?.first_name || '-'} ${p.employees?.last_name || '-'}</div>
+                        <div class="text-[11px] text-amber-600 font-medium mt-0.5">${companiesLookup[p.employees?.company_id] || '-'}</div>
+                    </td>
+                    <td class="px-3 py-4 font-mono text-slate-700 text-center border-r border-slate-200">
+                        <div class="font-bold">${maskData ? '***' : parseFloat(p.basic_salary).toFixed(2)}</div>
+                        <div class="text-[10px] text-slate-400 mt-1">ع: ${maskData ? '***' : parseFloat(p.employees?.contract_salary ? p.employees.contract_salary : (p.employees?.basic_salary || p.basic_salary)).toFixed(2)}</div>
+                    </td>
+                    <td class="px-3 py-4 font-mono text-emerald-600 font-bold text-center border-r border-slate-200">${maskData ? '***' : '+' + parseFloat(p.total_allowances).toFixed(2)}</td>
+                    <td class="px-3 py-4 font-mono text-red-500 font-bold text-center border-r border-slate-200">${maskData ? '***' : '-' + parseFloat(p.total_deductions).toFixed(2)}</td>
+                    
+                    <td class="px-2 py-4 border-r border-slate-200 bg-emerald-50/20 text-center">
+                        ${maskData ? '<span class="font-bold text-emerald-700">***</span>' : `<input type="number" min="0" class="ov-bonus w-16 text-center border rounded ${bgClass} text-xs p-1.5 font-bold text-emerald-700 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none" value="${p.manual_bonus || 0}" ${disableInput}>`}
+                    </td>
+                    <td class="px-2 py-4 bg-red-50/20 border-r border-slate-200 text-center">
+                        ${maskData ? '<span class="font-bold text-red-700">***</span>' : `<input type="number" min="0" class="ov-penalty w-16 text-center border rounded ${bgClass} text-xs p-1.5 font-bold text-red-700 focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none" value="${p.manual_penalty || 0}" ${disableInput}>`}
+                    </td>
+                    
+                    <td class="px-3 py-4 font-mono font-bold text-slate-900 border-r border-slate-200 bg-emerald-50/40 text-center text-base net-val shadow-inner">
+                        ${maskData ? '***' : parseFloat(p.net_salary).toFixed(2)}
+                    </td>
+                    <td class="px-3 py-4 border-r border-slate-200 text-center w-16">${badge}</td>
+                    <td class="px-3 py-4 text-center w-16">
+                        ${maskData ? '<span class="text-xs text-slate-400"><i class="fa-solid fa-lock"></i></span>' : (isPlaceholder ? `<span class="text-[10px] text-amber-700 font-bold">شغّل المحرك لإنشاء القسيمة</span>` : (canPreviewPrint ? `
+                        <button onclick="openPayslipPreviewModal(${index})" class="text-slate-400 hover:text-rose-600 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm text-sm transition-colors" title="معاينة/طباعة القسيمة">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>` : (canApprove ? `
+                        <button onclick="approveSinglePayslip('${p.id}', ${index})" class="text-emerald-700 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 px-3 py-1.5 rounded-lg shadow-sm text-[11px] font-bold transition-colors" title="اعتماد القسيمة">
+                            اعتماد
+                        </button>` : `<span class="text-[10px] text-slate-400 font-bold">لا صلاحية</span>`)))}
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+
+        // Dynamic Calculations on keyup/change for Overrides
+        if (!viewIsLocked) {
+            document.querySelectorAll('.ov-bonus, .ov-penalty').forEach(inp => {
+                inp.addEventListener('input', function () {
+                    const tr = this.closest('tr');
+                    const idx = tr.getAttribute('data-index');
+                    const obj = currentPayslips[idx];
+
+                    let b = parseFloat(tr.querySelector('.ov-bonus').value) || 0;
+                    let p = parseFloat(tr.querySelector('.ov-penalty').value) || 0;
+
+                    let newNet = (parseFloat(obj.basic_salary) + parseFloat(obj.total_allowances) + b) - (parseFloat(obj.total_deductions) + p);
+                    if (newNet < 0) newNet = 0;
+
+                    obj.manual_bonus = b;
+                    obj.manual_penalty = p;
+                    obj.net_salary = newNet;
+
+                    tr.querySelector('.net-val').innerText = newNet.toFixed(2);
+                });
+            });
+        }
+    }
+
+    // 3. Save / Approve Logics
+    window.savePayrollDraft = async function () {
+        if (!currentPayslips || currentPayslips.length === 0) return;
+
+        const drafts = currentPayslips.filter(p => p.employee_id);
+        if (drafts.length === 0) return alert('لا توجد بيانات قابلة للحفظ.');
+
+        const overlay = document.getElementById('engine-loading-overlay');
+        overlay.classList.remove('hidden'); overlay.classList.add('flex');
+
+        try {
+            const rows = Array.from(document.querySelectorAll('#payslips-tbody tr[data-index]'));
+            rows.forEach(tr => {
+                const idx = parseInt(tr.getAttribute('data-index'), 10);
+                const obj = currentPayslips[idx];
+                if (!obj || obj.status !== 'draft') return;
+
+                const bonusInput = tr.querySelector('.ov-bonus');
+                const penaltyInput = tr.querySelector('.ov-penalty');
+                const notesInput = tr.querySelector('.ov-notes');
+
+                const bonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : (parseFloat(obj.manual_bonus || 0) || 0);
+                const penalty = penaltyInput ? (parseFloat(penaltyInput.value) || 0) : (parseFloat(obj.manual_penalty || 0) || 0);
+                const notes = notesInput ? (notesInput.value || '') : (obj.notes || '');
+                const base = parseFloat(obj.basic_salary || 0);
+                const allow = parseFloat(obj.total_allowances || 0);
+                const deduct = parseFloat(obj.total_deductions || 0);
+                const net = Math.max(0, (base + allow + bonus) - (deduct + penalty));
+
+                obj.manual_bonus = bonus;
+                obj.manual_penalty = penalty;
+                obj.notes = notes;
+                obj.net_salary = net;
+                obj.status = (obj.status === 'approved' || obj.status === 'final') ? obj.status : 'draft';
+            });
+
+            const upsertData = [];
+            for (let i = 0; i < currentPayslips.length; i++) {
+                const d = currentPayslips[i];
+                if (!d || !d.employee_id) continue;
+
+                const row = document.querySelector(`#payslips-tbody tr[data-index="${i}"]`);
+                const bonusInput = row ? row.querySelector('.ov-bonus') : null;
+                const penaltyInput = row ? row.querySelector('.ov-penalty') : null;
+                const notesInput = row ? row.querySelector('.ov-notes') : null;
+
+                const manualBonus = bonusInput ? (parseFloat(bonusInput.value) || 0) : (parseFloat(d.manual_bonus || 0) || 0);
+                const manualPenalty = penaltyInput ? (parseFloat(penaltyInput.value) || 0) : (parseFloat(d.manual_penalty || 0) || 0);
+                const notes = notesInput ? (notesInput.value || '') : (d.notes || '');
+                const basic = parseFloat(d.basic_salary || 0);
+                const allowances = parseFloat(d.total_allowances || 0);
+                const deductions = parseFloat(d.total_deductions || 0);
+                const absencesDeduction = parseFloat(d.absences_deduction || 0);
+                const net = Math.max(0, (basic + allowances + manualBonus) - (deductions + manualPenalty));
+
+                d.manual_bonus = manualBonus;
+                d.manual_penalty = manualPenalty;
+                d.notes = notes;
+                d.net_salary = net;
+                d.status = 'draft';
+
+                upsertData.push({
+                    employee_id: d.employee_id,
+                    company_id: d.company_id || d.employees?.company_id || null,
+                    month: parseInt(d.month, 10),
+                    year: parseInt(d.year, 10),
+                    basic_salary: basic,
+                    total_allowances: allowances,
+                    total_deductions: deductions,
+                    absences_deduction: absencesDeduction,
+                    manual_bonus: manualBonus,
+                    manual_penalty: manualPenalty,
+                    notes: notes,
+                    net_salary: net,
+                    status: 'draft'
+                });
+            }
+
+            const { error } = await window.db.from('payslips').upsert(upsertData, { onConflict: 'employee_id,month,year' });
+            if (error) throw error;
+
+            alert('تم حفظ التعديلات بنجاح');
+            const m = document.getElementById('engine-month').value;
+            const y = document.getElementById('engine-year').value;
+            const c = document.getElementById('engine-company').value;
+            loadEngineTable(m, y, c);
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء حفظ المسودة.');
+            overlay.classList.add('hidden'); overlay.classList.remove('flex');
+        }
+    }
+
+    window.saveFinalPayroll = async function () {
+        // Console Bypass Guard
+        if (!canApprovePayrollAction()) return alert('Security Block: غير مصرح لك باعتماد المسير.');
+        if (!currentPayslips || currentPayslips.length === 0) return;
+
+        const drafts = currentPayslips.filter(p => p.status === 'draft' && p.id);
+        if (drafts.length === 0) return alert('الجميع معتمد ولا يوجد مسودات للحفظ (أو لم تُنشأ القسائم بعد — شغّل المحرك).');
+
+        if (!confirm('الاعتماد النهائي سيقفل هذا الشهر ولن تستطيع إجراء تعديلات "بونص" أو "خصم" إضافي. هل أنت متأكد؟')) return;
+
+        const overlay = document.getElementById('engine-loading-overlay');
+        overlay.classList.remove('hidden'); overlay.classList.add('flex');
+
+        try {
+            // Ensure net salary is always computed from latest values before approval.
+            drafts.forEach(d => {
+                const base = parseFloat(d.basic_salary || 0);
+                const allow = parseFloat(d.total_allowances || 0);
+                const deduct = parseFloat(d.total_deductions || 0);
+                const bonus = parseFloat(d.manual_bonus || 0);
+                const penalty = parseFloat(d.manual_penalty || 0);
+                const net = Math.max(0, (base + allow + bonus) - (deduct + penalty));
+                d.net_salary = net;
+            });
+
+            // Because Free tier might choke on heavy batch updates, perform parallel promises safely mapped
+            const updates = drafts.map(d => {
+                return window.db.from('payslips').update({
+                    manual_bonus: parseFloat(d.manual_bonus || 0),
+                    manual_penalty: parseFloat(d.manual_penalty || 0),
+                    net_salary: parseFloat(d.net_salary || 0),
+                    status: 'approved'
+                }).eq('id', d.id);
+            });
+
+            await Promise.all(updates);
+
+            try {
+                // Get all employees in this locked batch
+                const batchEmpIds = drafts.map(d => d.employee_id);
+
+                // Fetch their active loans
+                const { data: activeLoans } = await window.db.from('employee_requests')
+                    .select('*').eq('request_type', 'loan').eq('status', 'approved').in('employee_id', batchEmpIds);
+
+                if (activeLoans && activeLoans.length > 0) {
+                    const loanUpdates = activeLoans.map(loan => {
+                        let remaining = parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0);
+                        let monthDed = parseFloat(loan.monthly_deduction || loan.amount || 0);
+                        let deductedThisMonth = Math.min(monthDed, remaining);
+
+                        let newPaid = parseFloat(loan.paid_amount || 0) + deductedThisMonth;
+                        let newStatus = newPaid >= parseFloat(loan.amount) ? 'processed' : 'approved'; // processed = fully paid off
+
+                        return window.db.from('employee_requests').update({
+                            paid_amount: newPaid,
+                            status: newStatus
+                        }).eq('id', loan.id);
+                    });
+                    await Promise.all(loanUpdates);
+                }
+            } catch (loanErr) {
+                console.error("Failed to update loan balances", loanErr);
+            }
+
+            alert('تم اعتماد المسير بنجاح وقفل الجداول.');
+            const m = document.getElementById('engine-month').value;
+            const y = document.getElementById('engine-year').value;
+            const c = document.getElementById('engine-company').value;
+            loadEngineTable(m, y, c);
+
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء حفظ الاعتماد.');
+            overlay.classList.add('hidden'); overlay.classList.remove('flex');
+        }
+    }
+
+    window.approveSinglePayslip = async function (payslipId, index) {
+        if (!canApprovePayrollAction()) return alert('Security Block: غير مصرح لك باعتماد القسائم.');
+        const item = currentPayslips[index];
+        if (!item || item.id !== payslipId) return;
+        if (item.status === 'approved' || item.status === 'final') return;
+        if (!confirm('تأكيد اعتماد هذه القسيمة نهائياً؟')) return;
+
+        const base = parseFloat(item.basic_salary || 0);
+        const allow = parseFloat(item.total_allowances || 0);
+        const deduct = parseFloat(item.total_deductions || 0);
+        const bonus = parseFloat(item.manual_bonus || 0);
+        const penalty = parseFloat(item.manual_penalty || 0);
+        const net = Math.max(0, (base + allow + bonus) - (deduct + penalty));
+
+        try {
+            const { error } = await window.db.from('payslips').update({
+                manual_bonus: bonus,
+                manual_penalty: penalty,
+                net_salary: net,
+                status: 'approved'
+            }).eq('id', payslipId);
+            if (error) throw error;
+
+            item.net_salary = net;
+            item.status = 'approved';
+            renderPayslipsTable(false);
+        } catch (e) {
+            console.error(e);
+            alert('تعذر اعتماد القسيمة.');
+        }
+    };
+
+
+    /* ==========================================================================
+       RULE MANAGER MODAL
+    ========================================================================== */
+    window.openRuleManager = async function () {
+        if (window.hasPerm && !window.hasPerm('settings', 'view')) {
+            return alert('Security Block: غير مصرح لك بهذا الإجراء.');
+        }
+        const modal = document.getElementById('rule-modal');
+        if (modal.parentNode !== document.body) document.body.appendChild(modal);
+        modal.classList.remove('hidden'); modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        await loadActiveRules();
+    }
+
+    window.closeRuleManager = function () {
+        const modal = document.getElementById('rule-modal');
+        modal.classList.add('hidden'); modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+        document.getElementById('rule-form').reset();
+    }
+
+    async function loadActiveRules() {
+        const listDiv = document.getElementById('rules-list');
+        listDiv.innerHTML = '<div class="text-center py-5 text-slate-400 text-xs"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</div>';
+        try {
+            let res = await window.db.from('payroll_rules').select('*').eq('is_active', true);
+            if (res.error) throw res.error;
+            let data = res.data;
+            if (!data || data.length === 0) {
+                listDiv.innerHTML = '<div class="text-center py-4 bg-white border border-slate-200 rounded text-slate-500 font-bold text-xs"><i class="fa-solid fa-wind mb-2 text-2xl text-slate-300 block"></i> لا توجد قواعد مفعلة حالياً</div>';
+                return;
+            }
+            let html = '';
+            data.forEach(r => {
+                const isAllow = (r.rule_type === 'allowance');
+                const tName = isAllow ? 'بدل إضافي' : 'استقطاع وخصم';
+                const vDisplay = (r.value_type === 'percentage') ? `${r.value}% من الأساسي` : `${r.value} ر.س مقطوع`;
+                const tColor = isAllow ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-rose-600 bg-rose-50 border-rose-200';
+
+                html += `
+                    <div class="p-3 bg-white border border-slate-200 hover:border-slate-300 rounded-lg shadow-sm transition-colors relative">
+                        <button onclick="deleteRule('${r.id}')" class="absolute top-2 left-2 text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                        <h5 class="font-bold text-slate-800 text-sm mb-1">${r.name}</h5>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span class="px-2 py-0.5 rounded border font-bold ${tColor}">${tName}</span>
+                            <span class="px-2 py-0.5 border border-slate-200 rounded text-slate-600 font-mono font-medium bg-slate-50">${vDisplay}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+        } catch (e) {
+            console.error("Rules fetch error:", e);
+            listDiv.innerHTML = '<div class="text-center py-4 text-red-500 font-bold text-xs">تأكد من إنشاء جدول payroll_rules مسبقاً في قاعدة البيانات!</div>';
+        }
+    }
+
+    document.getElementById('rule-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-rule');
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        try {
+            const { error } = await window.db.from('payroll_rules').insert([{
+                name: document.getElementById('rule-name').value,
+                rule_type: document.getElementById('rule-type').value,
+                value_type: document.getElementById('rule-val-type').value,
+                value: parseFloat(document.getElementById('rule-value').value),
+                is_active: true
+            }]);
+            if (error) throw error;
+            document.getElementById('rule-form').reset();
+            loadActiveRules();
+        } catch (err) {
+            console.error(err); alert('فشل الإضافة');
+        } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-plus"></i> إضافة القاعدة';
+        }
+    });
+
+    window.deleteRule = async function (id) {
+        if (window.hasPerm && !window.hasPerm('payroll', 'edit')) return alert('Security Block: غير مصرح لك بالحذف.');
+        if (!confirm('هل تريد فعلاً إزالة هذه القاعدة بشكل نهائي من المحرك؟')) return;
+        try {
+            await window.db.from('payroll_rules').update({ is_active: false }).eq('id', id);
+            loadActiveRules();
+        } catch (e) { }
+    }
+
+    window.openPayslipPreviewModal = function (index) {
+        if (window.hasPerm && !window.hasPerm('payroll', 'view')) return alert('Security Block: غير مصرح لك بهذا الإجراء.');
+        const item = currentPayslips[index];
+        if (!item) return;
+        if (item.status === 'draft') return alert('القسيمة متاحة للطباعة بعد الاعتماد النهائي فقط.');
+
+        previewPayslipIndex = index;
+        document.getElementById('pv-emp-name').innerText = `${item.employees?.first_name || ''} ${item.employees?.last_name || ''}`.trim() || 'موظف';
+        document.getElementById('pv-period').innerText = `فترة الراتب: ${String(item.month).padStart(2, '0')}/${item.year}`;
+        document.getElementById('pv-basic').innerText = parseFloat(item.basic_salary || 0).toFixed(2);
+        document.getElementById('pv-allow').innerText = (parseFloat(item.total_allowances || 0) + parseFloat(item.manual_bonus || 0)).toFixed(2);
+        document.getElementById('pv-deduct').innerText = (parseFloat(item.total_deductions || 0) + parseFloat(item.manual_penalty || 0)).toFixed(2);
+        document.getElementById('pv-net').innerText = parseFloat(item.net_salary || 0).toFixed(2);
+
+        const modal = document.getElementById('payslip-preview-modal');
+        if (modal.parentNode !== document.body) document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closePayslipPreviewModal = function () {
+        const modal = document.getElementById('payslip-preview-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        previewPayslipIndex = null;
+    };
+
+    document.getElementById('btn-pv-print').addEventListener('click', () => {
+        if (previewPayslipIndex === null) return;
+        printHDPayslip(previewPayslipIndex);
+    });
+
+
+    /* ==========================================================================
+       HD PDF EXPORT LOGIC
+    ========================================================================== */
+    window.printHDPayslip = function (index) {
+        if (window.hasPerm && !window.hasPerm('payroll', 'view')) return alert('Security Block: غير مصرح لك بالطباعة.');
+        const item = currentPayslips[index];
+        if (!item) return;
+
+        // Construct Name Strings properly protecting nulls
+        const fName = item.employees?.first_name || '';
+        const lName = item.employees?.last_name || '';
+        const compId = item.employees?.company_id || '';
+
+        // Hydrate DOM
+        document.getElementById('pdf-co-name').innerText = companiesLookup[compId] || 'المنشأة العامة';
+        document.getElementById('pdf-co-period').innerText = `${String(item.month).padStart(2, '0')}/${item.year}`;
+        document.getElementById('pdf-emp-name').innerText = `${fName} ${lName}`;
+        document.getElementById('pdf-emp-id').innerText = (item.employee_id || '').substring(0, 8).toUpperCase();
+
+        document.getElementById('pdf-tbl-basic').innerText = parseFloat(item.basic_salary || 0).toFixed(2);
+        document.getElementById('pdf-tbl-allow').innerText = parseFloat(item.total_allowances || 0).toFixed(2);
+        document.getElementById('pdf-tbl-bonus').innerText = parseFloat(item.manual_bonus || 0).toFixed(2);
+        document.getElementById('pdf-tbl-deduct').innerText = `-${parseFloat(item.total_deductions || 0).toFixed(2)}`; // Put minus sign to look clean
+        document.getElementById('pdf-tbl-penalty').innerText = `-${parseFloat(item.manual_penalty || 0).toFixed(2)}`;
+        document.getElementById('pdf-tbl-net').innerText = parseFloat(item.net_salary || 0).toFixed(2);
+
+        // Prep target
+        const element = document.getElementById('hd-pdf-template');
+        element.classList.remove('hidden');
+        element.style.display = 'block';
+
+        // High Quality Opts
+        const opt = {
+            margin: 0,
+            filename: `Payslip_${fName}_${item.month}_${item.year}.pdf`,
+            image: { type: 'jpeg', quality: 1.0 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Render, Save, Hide
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.style.display = 'none';
+            element.classList.add('hidden');
+        });
+    }
+
+    /* ==========================================================================
+       WPS (EXCEL) CSV 
+    ========================================================================== */
+    window.exportWPS = function () {
+        if (window.hasPerm && !window.hasPerm('payroll', 'view')) return alert('Security Block: غير مصرح لك بالتصدير.');
+        if (!currentPayslips || currentPayslips.length === 0) return alert('لا يوجد سجلات لتصديرها.');
+        const wpsRows = currentPayslips.filter(p => p.id);
+        if (wpsRows.length === 0) return alert('لا توجد قسائم محفوظة للتصدير — شغّل المحرك أولاً لإنشاء القسائم.');
+
+        let csv = "data:text/csv;charset=utf-8,\uFEFF";
+        csv += "Employee_ID,Name,Basic_Salary,Total_Housing_and_Allowances,Total_Deductions,Net_Salary,Entity_Name\n";
+
+        wpsRows.forEach(p => {
+            let totalErn = parseFloat(p.total_allowances || 0) + parseFloat(p.manual_bonus || 0);
+            let totalDed = parseFloat(p.total_deductions || 0) + parseFloat(p.manual_penalty || 0);
+            let nameClean = `${p.employees?.first_name || ''} ${p.employees?.last_name || ''}`;
+
+            let row = [
+                (p.employee_id || '').substring(0, 8),
+                `"${nameClean}"`,
+                parseFloat(p.basic_salary || 0).toFixed(2),
+                totalErn.toFixed(2),
+                totalDed.toFixed(2),
+                parseFloat(p.net_salary || 0).toFixed(2),
+                `"${companiesLookup[p.employees?.company_id] || ''}"`
+            ];
+            csv += row.join(",") + "\n";
+        });
+
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csv));
+        const yStr = document.getElementById('engine-year').value;
+        const mStr = document.getElementById('engine-month').value;
+        link.setAttribute("download", `WPS_Sif_Format_${mStr}_${yStr}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+
+    // INIT
+    initPayrollSystem();
+
+</script>

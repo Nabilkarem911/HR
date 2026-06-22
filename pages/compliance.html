@@ -1,0 +1,783 @@
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-primary"></i>
+                إدارة الامتثال والوثائق
+            </h2>
+            <p class="text-slate-500 mt-1">متابعة وتنبيهات صلاحية الوثائق الرسمية للموظفين (إقامات، جوازات، تأمين طبّي)
+            </p>
+        </div>
+        <button onclick="openDocModal()"
+            class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm shadow-primary/30">
+            <i class="fa-solid fa-plus rtl-flip"></i>
+            إضافة وثيقة جديدة
+        </button>
+    </div>
+
+    <!-- Smart Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Expired (Critical) -->
+        <div class="bg-white rounded-2xl p-6 border-l-4 border-l-rose-500 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1 content-start">وثائق منتهية (حرج)</p>
+                <h3 class="text-3xl font-black text-rose-600 drop-shadow-sm" id="count-expired">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div class="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+
+        <!-- Expiring Soon (Warning) -->
+        <div class="bg-white rounded-2xl p-6 border-l-4 border-l-amber-500 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1">تجديد قريب (أقل من 60 يوم)</p>
+                <h3 class="text-3xl font-black text-amber-500 drop-shadow-sm" id="count-warning">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div class="w-14 h-14 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+        </div>
+
+        <!-- Active (Safe) -->
+        <div
+            class="bg-white rounded-2xl p-6 border-l-4 border-l-emerald-500 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-500 font-bold mb-1">وثائق سارية (آمن)</p>
+                <h3 class="text-3xl font-black text-emerald-500 drop-shadow-sm" id="count-active">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+            </div>
+            <div
+                class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-check-double"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Data Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <!-- Filters Area -->
+        <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-4 items-center">
+            <div class="flex-1 w-full md:w-auto relative group">
+                <i
+                    class="fa-solid fa-building text-slate-400 absolute right-4 top-3 group-focus-within:text-primary transition-colors"></i>
+                <select id="filter-company"
+                    class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-slate-700 font-medium shadow-sm"
+                    onchange="loadDocuments()">
+                    <option value="">كل المنشآت المتوفرة</option>
+                    <!-- Populated dynamically -->
+                </select>
+                <i
+                    class="fa-solid fa-chevron-down text-xs text-slate-400 absolute left-4 top-4 pointer-events-none"></i>
+            </div>
+
+            <div class="flex-1 w-full md:w-auto relative group">
+                <i
+                    class="fa-solid fa-filter text-slate-400 absolute right-4 top-3 group-focus-within:text-primary transition-colors"></i>
+                <select id="filter-type"
+                    class="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-slate-700 font-medium shadow-sm"
+                    onchange="loadDocuments()">
+                    <option value="">جميع أنواع الوثائق</option>
+                    <option value="إقامة">هوية مقيم / إقامة</option>
+                    <option value="جواز سفر">جواز سفر</option>
+                    <option value="تأمين طبي">تأمين طبي</option>
+                    <option value="رخصة قيادة">رخصة قيادة</option>
+                    <option value="شهادة صحية">شهادة صحية مهنية</option>
+                </select>
+                <i
+                    class="fa-solid fa-chevron-down text-xs text-slate-400 absolute left-4 top-4 pointer-events-none"></i>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto min-h-[400px]">
+            <table class="w-full text-right" id="docs-table">
+                <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold text-sm">
+                    <tr>
+                        <th class="p-4">الموظف والفرع</th>
+                        <th class="p-4">نوع الوثيقة</th>
+                        <th class="p-4">رقم الوثيقة</th>
+                        <th class="p-4">تاريخ الانتهاء</th>
+                        <th class="p-4 text-center">الأيام المتبقية</th>
+                        <th class="p-4 text-center">الحالة</th>
+                        <th class="p-4 w-24 text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50 text-slate-700" id="docs-tbody">
+                    <!-- Data injected via JS -->
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p>جاري تحميل السجلات...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Document Modal -->
+<div id="doc-modal" class="fixed inset-0 z-[100] hidden">
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="doc-modal-overlay"
+        onclick="closeDocModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full scale-95 opacity-0 z-[101]"
+            id="doc-modal-content">
+
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-l from-primary to-blue-600 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="text-xl font-bold flex items-center gap-2" id="doc-modal-title">
+                    <i class="fa-solid fa-file-contract"></i> <span>إضافة وثيقة جديدة</span>
+                </h3>
+                <button type="button" onclick="closeDocModal()"
+                    class="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-lg w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="doc-form" class="p-6 space-y-5">
+                <input type="hidden" id="doc-id">
+
+                <div class="space-y-4">
+                    <!-- Employee Select -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">الموظف <span
+                                class="text-red-500">*</span></label>
+                        <select id="doc-emp-id" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm appearance-none bg-slate-50 text-slate-700">
+                            <option value="">-- اختر الموظف --</option>
+                            <!-- Fetched Dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Doctype Select -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">نوع الوثيقة <span
+                                class="text-red-500">*</span></label>
+                        <input list="doc-types-list" id="doc-type" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm text-right"
+                            placeholder="اختر أو اكتب نوع الوثيقة...">
+                        <datalist id="doc-types-list">
+                            <option value="إقامة">
+                            <option value="جواز سفر">
+                            <option value="تأمين طبي">
+                            <option value="رخصة قيادة">
+                            <option value="شهادة صحية">
+                        </datalist>
+                    </div>
+
+                    <!-- Doc Number -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">رقم الوثيقة <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" id="doc-number" required dir="ltr"
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm text-right"
+                            placeholder="Ex: 2xxxxxxxx">
+                    </div>
+
+                    <!-- Expiry Date -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">تاريخ الانتهاء <span
+                                class="text-red-500">*</span></label>
+                        <input type="date" id="doc-expiry" required
+                            class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm">
+                        <p class="text-xs text-slate-400 mt-1"><i class="fa-regular fa-calendar-days ml-1"></i> يرجى
+                            إدخال التاريخ الميلادي المطبوع على الوثيقة</p>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeDocModal()"
+                        class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">
+                        إلغاء
+                    </button>
+                    <button type="submit" id="btn-submit-doc"
+                        class="px-5 py-2.5 rounded-xl bg-primary hover:bg-blue-600 text-white font-medium shadow-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-save"></i> <span>حفظ الوثيقة</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Renew Modal -->
+<div id="renew-modal" class="fixed inset-0 z-[100] hidden">
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity opacity-0" id="renew-modal-overlay"
+        onclick="closeRenewModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="relative bg-white rounded-2xl text-right overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-md w-full scale-95 opacity-0 z-[101]"
+            id="renew-modal-content">
+
+            <!-- Header -->
+            <div
+                class="bg-gradient-to-l from-emerald-500 to-teal-600 px-6 py-4 flex items-center justify-between text-white">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-rotate"></i> <span>تجديد الوثيقة السريع</span>
+                </h3>
+                <button type="button" onclick="closeRenewModal()"
+                    class="text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-lg w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="renew-form" class="p-6 space-y-5">
+                <input type="hidden" id="renew-doc-id">
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-2">
+                    <p class="text-sm text-slate-500 mb-1">تاريخ الانتهاء الحالي:</p>
+                    <p class="font-bold text-slate-800 font-mono" id="renew-current-date">--/--/----</p>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-sm font-semibold text-slate-700">تمديد سريع (إضافة أشهر):</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button type="button" onclick="applyQuickRenew(3)"
+                            class="py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-500 hover:text-white transition-colors focus:ring-2 focus:ring-emerald-400 focus:outline-none">+
+                            3 أشهر</button>
+                        <button type="button" onclick="applyQuickRenew(6)"
+                            class="py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-500 hover:text-white transition-colors focus:ring-2 focus:ring-emerald-400 focus:outline-none">+
+                            6 أشهر</button>
+                        <button type="button" onclick="applyQuickRenew(12)"
+                            class="py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-500 hover:text-white transition-colors focus:ring-2 focus:ring-emerald-400 focus:outline-none">+
+                            سنة</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">تاريخ الانتهاء الجديد <span
+                            class="text-red-500">*</span></label>
+                    <input type="date" id="renew-new-date" required
+                        class="w-full border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm font-mono tracking-wider">
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeRenewModal()"
+                        class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition-colors">
+                        إلغاء
+                    </button>
+                    <button type="submit" id="btn-submit-renew"
+                        class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-check"></i> <span>حفظ التجديد</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalDocsList = [];
+    let globalEmpList = [];
+    let globalCompaniesDict = {};
+
+    // 1. Initializer Pipeline
+    async function initCompliance() {
+        await fetchRBACFilters();
+        await loadCompanies();
+        await loadEmployees();
+        await loadDocuments();
+    }
+
+    // 2. Fetch RBAC Filters
+    async function fetchRBACFilters() {
+        // Enforce RBAC logic correctly based on logged-in user profile
+        const role = window.currentUserRole || 'viewer';
+        const filterEl = document.getElementById('filter-company');
+
+        if (role === 'super_admin' || role === 'hr_manager') {
+            // Can see all companies
+            filterEl.disabled = false;
+        } else if (role === 'branch_manager') {
+            // Can only see their company
+            const { data: { user } } = await window.db.auth.getUser();
+            if (user) {
+                const { data: suData } = await window.db.from('system_users').select('company_id').eq('id', user.id).single();
+                if (suData && suData.company_id) {
+                    window.currentUserCompanyId = suData.company_id; // Set this boundary globally here
+                    filterEl.value = window.currentUserCompanyId;
+                    filterEl.disabled = true; // Lock dropdown
+                    filterEl.classList.add('bg-slate-100', 'cursor-not-allowed', 'opacity-70');
+                }
+            }
+        }
+    }
+
+    // 3. Load Parent Data
+    async function loadCompanies() {
+        try {
+            const { data, error } = await window.db.from('companies').select('id, name');
+            if (error) throw error;
+
+            const filterEl = document.getElementById('filter-company');
+            // Store centrally
+            globalCompaniesDict = data.reduce((acc, c) => ({ ...acc, [c.id]: c.name }), {});
+
+            // Re-populate preserving default
+            filterEl.innerHTML = '<option value="">كل المنشآت المتوفرة</option>';
+            data.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                filterEl.appendChild(opt);
+            });
+
+            // Re-assert RBAC if locked
+            if (window.currentUserCompanyId) filterEl.value = window.currentUserCompanyId;
+
+        } catch (e) { console.error("Error loading companies:", e); }
+    }
+
+    window.loadEmployees = async function() {
+        try {
+            // Robust employee fetch, enforcing multitenancy at the database level
+            let query = window.db.from('employees').select('id, first_name, last_name, company_id').eq('status', 'active').is('deleted_at', null);
+            
+            // Strict Isolation
+            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                query = query.eq('company_id', window.currentUserCompanyId);
+            } else if (document.getElementById('filter-company').value) {
+                query = query.eq('company_id', document.getElementById('filter-company').value);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            globalEmpList = data || [];
+
+            const empSelect = document.getElementById('doc-emp-id');
+            empSelect.innerHTML = '<option value="">-- اختر الموظف --</option>';
+            globalEmpList.forEach(e => {
+                const empName = (`${e.first_name || ''} ${e.last_name || ''}`).trim() || 'بدون اسم';
+                const compName = globalCompaniesDict[e.company_id] ? ` - ${globalCompaniesDict[e.company_id]}` : '';
+                empSelect.innerHTML += `<option value="${e.id}">${empName}${compName}</option>`;
+            });
+        } catch (e) {
+            console.error("Error loading employees:", e);
+        }
+    }
+
+    // 4. Load Core Documents
+    window.loadDocuments = async function() {
+        const tbody = document.getElementById('docs-tbody');
+        tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p>جاري تحديث البيانات...</p></td></tr>`;
+
+        try {
+            // Build employee documents query robustly enforcing relationships
+            let query = window.db.from('employee_documents')
+                .select(`*, employees!inner( id, first_name, last_name, company_id )`);
+
+            // Apply Doc Type Filter natively
+            const typeFilter = document.getElementById('filter-type').value;
+            if (typeFilter) {
+                query = query.eq('doc_type', typeFilter);
+            }
+
+            // Strictly enforce RBAC externally over PostgREST to prevent local data breaches
+            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                query = query.eq('employees.company_id', window.currentUserCompanyId);
+            } else {
+                const selectedCompany = document.getElementById('filter-company').value;
+                if (selectedCompany && selectedCompany !== 'all') {
+                    query = query.eq('employees.company_id', selectedCompany);
+                }
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            const employeeRecords = data || [];
+
+            // Vehicle documents are optional (graceful fallback if table doesn't exist)
+            let vehicleRecords = [];
+            try {
+                let vQuery = window.db.from('vehicle_documents')
+                    .select('id, doc_type, doc_number, expiry_date, vehicle_id, vehicles!inner(id, plate_number, make, model, company_id)');
+
+                if (typeFilter) {
+                    vQuery = vQuery.eq('doc_type', typeFilter);
+                }
+
+                if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                    vQuery = vQuery.eq('vehicles.company_id', window.currentUserCompanyId);
+                } else {
+                    const selectedCompany = document.getElementById('filter-company').value;
+                    if (selectedCompany && selectedCompany !== 'all') {
+                        vQuery = vQuery.eq('vehicles.company_id', selectedCompany);
+                    }
+                }
+
+                const { data: vData, error: vError } = await vQuery;
+                if (!vError) {
+                    vehicleRecords = (vData || []).map(v => ({
+                        id: v.id,
+                        doc_type: v.doc_type,
+                        doc_number: v.doc_number,
+                        expiry_date: v.expiry_date,
+                        source_type: 'vehicle',
+                        vehicles: v.vehicles
+                    }));
+                }
+            } catch (vehErr) {
+                // Ignore silently to keep employee docs functional even before creating vehicle tables
+            }
+
+            let records = [
+                ...employeeRecords.map(r => ({ ...r, source_type: 'employee' })),
+                ...vehicleRecords
+            ];
+            globalDocsList = records;
+
+            // Execute Traffic Light Logic & Sorting BEFORE Rendering
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+
+            let expiredCount = 0;
+            let warningCount = 0;
+            let activeCount = 0;
+
+            const enrichedDocs = globalDocsList.map(doc => {
+                const expDate = new Date(doc.expiry_date);
+                const diffTime = expDate - todayDate;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let rank = 3; // Safe
+                if (diffDays < 0) {
+                    rank = 1; // Expired (Highest priority)
+                    expiredCount++;
+                } else if (diffDays <= 60) {
+                    rank = 2; // Warning
+                    warningCount++;
+                } else {
+                    activeCount++;
+                }
+
+                return { ...doc, diffDays, rank };
+            });
+
+            // Sort: Expired (1) -> Warning (2) -> Safe (3), then by Days Ascending
+            enrichedDocs.sort((a, b) => {
+                if (a.rank !== b.rank) return a.rank - b.rank;
+                return a.diffDays - b.diffDays;
+            });
+
+            // Update KPI Cards
+            document.getElementById('count-expired').innerText = expiredCount;
+            document.getElementById('count-warning').innerText = warningCount;
+            document.getElementById('count-active').innerText = activeCount;
+
+            // Render Table
+            if (enrichedDocs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center font-bold text-slate-400"><i class="fa-regular fa-folder-open text-4xl mb-3 block opacity-50"></i> لم يتم تسجيل أي وثائق تطابق الفرز.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            enrichedDocs.forEach(d => {
+                const rawEmpName = d.source_type === 'vehicle'
+                    ? (`سيارة: ${d.vehicles?.plate_number || '-'}`)
+                    : (d.employees ? (`${d.employees.first_name || ''} ${d.employees.last_name || ''}`.trim() || 'غير محدد') : 'موظف غير معروف');
+                const compId = d.source_type === 'vehicle'
+                    ? (d.vehicles ? d.vehicles.company_id : null)
+                    : (d.employees ? d.employees.company_id : null);
+                const compName = globalCompaniesDict[compId] || 'المنشأة غير محددة';
+
+                // Traffic Light styling
+                let badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                let badgeIcon = 'fa-check';
+                let badgeText = 'سارية';
+                let daysColor = 'text-emerald-600';
+
+                if (d.rank === 1) {
+                    badgeClass = 'bg-rose-100 text-rose-700 border-rose-200 shadow-sm';
+                    badgeIcon = 'fa-xmark';
+                    badgeText = 'منتهية';
+                    daysColor = 'text-rose-600 font-bold';
+                } else if (d.rank === 2) {
+                    badgeClass = 'bg-amber-100 text-amber-700 border-amber-200 shadow-sm';
+                    badgeIcon = 'fa-triangle-exclamation';
+                    badgeText = 'تجديد قريب';
+                    daysColor = 'text-amber-600 font-bold';
+                }
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="p-4">
+                            <p class="font-bold text-slate-800">${rawEmpName}</p>
+                            <p class="text-xs text-slate-500 mt-0.5"><i class="fa-solid fa-building ml-1 text-slate-400"></i>${compName}</p>
+                            ${d.source_type === 'vehicle' ? `<p class="text-[11px] text-slate-400 mt-0.5">${d.vehicles?.make || ''} ${d.vehicles?.model || ''}</p>` : ''}
+                        </td>
+                        <td class="p-4 font-semibold text-slate-700">${d.doc_type}</td>
+                        <td class="p-4 font-mono text-slate-600 tracking-wide">${d.doc_number}</td>
+                        <td class="p-4 text-slate-600">${d.expiry_date}</td>
+                        <td class="p-4 text-center ${daysColor}">${d.diffDays} يوم</td>
+                        <td class="p-4 text-center">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badgeClass}">
+                                <i class="fa-solid ${badgeIcon}"></i> ${badgeText}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${d.source_type === 'vehicle'
+                                    ? `<a href="#vehicles" class="px-2 py-1 h-8 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-500 hover:text-white transition-colors flex items-center justify-center font-bold text-xs gap-1 shadow-sm border border-cyan-100" title="فتح سجل السيارات"><i class="fa-solid fa-car"></i> فتح</a>`
+                                    : `
+                                    <a href="${d.file_url || '#'}" target="_blank" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-colors flex items-center justify-center border border-emerald-200" title="تحميل/عرض">
+                                        <i class="fa-solid fa-download text-sm"></i>
+                                    </a>
+                                    ${(window.hasPerm && window.hasPerm('compliance', 'edit')) ? `
+                                    <button onclick="window.openRenewModal('${d.id}', '${d.expiry_date}', event)" class="px-2 py-1 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center font-bold text-xs gap-1 shadow-sm border border-blue-100" title="تجديد سريع">
+                                        <i class="fa-solid fa-rotate"></i> تجديد
+                                    </button>
+                                    <button onclick="window.editDoc('${d.id}', event)" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-colors flex items-center justify-center border border-emerald-100" title="تعديل">
+                                        <i class="fa-solid fa-pen text-sm"></i>
+                                    </button>
+                                    ` : ''}
+                                    ${(window.hasPerm && window.hasPerm('compliance', 'delete')) ? `
+                                    <button onclick="window.deleteDoc('${d.id}', event)" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white transition-colors flex items-center justify-center border border-rose-100" title="حذف">
+                                        <i class="fa-solid fa-trash text-sm"></i>
+                                    </button>
+                                    ` : ''}
+                                    `}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (e) {
+            console.error("Load Documents Error: ", e);
+            tbody.innerHTML = `<tr><td colspan="7" class="py-12 text-center font-bold text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> خطأ في تحميل البيانات</td></tr>`;
+        }
+    }
+
+    // 5. Modal Logic
+    window.openDocModal = function() {
+        // Reset form
+        document.getElementById('doc-form').reset();
+        document.getElementById('doc-id').value = '';
+        document.getElementById('doc-modal-title').innerHTML = '<i class="fa-solid fa-file-contract"></i> <span>إضافة وثيقة جديدة</span>';
+
+        loadEmployees(); // Refresh employees dropdown just in case
+
+        // Animation
+        const modal = document.getElementById('doc-modal');
+        const overlay = document.getElementById('doc-modal-overlay');
+        const content = document.getElementById('doc-modal-content');
+
+        modal.classList.remove('hidden');
+        // Trigger reflow
+        void modal.offsetWidth;
+
+        overlay.classList.remove('opacity-0');
+        content.classList.remove('opacity-0', 'scale-95');
+    };
+
+    window.closeDocModal = function() {
+        const overlay = document.getElementById('doc-modal-overlay');
+        const content = document.getElementById('doc-modal-content');
+
+        document.getElementById('doc-form').reset();
+        document.getElementById('doc-id').value = '';
+
+        overlay.classList.add('opacity-0');
+        content.classList.add('opacity-0', 'scale-95');
+
+        setTimeout(() => {
+            document.getElementById('doc-modal').classList.add('hidden');
+        }, 300);
+    };
+
+    // 6. Form Submission
+    document.getElementById('doc-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const reqAction = document.getElementById('doc-id').value ? 'edit' : 'add';
+        if (window.hasPerm && !window.hasPerm('compliance', reqAction)) return alert(`Security Block: غير مصرح لك بـ ${reqAction === 'edit' ? 'التعديل' : 'الإضافة'}.`);
+        const btn = document.getElementById('btn-submit-doc');
+        const ogHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> حفظ...';
+        btn.disabled = true;
+
+        const recordId = document.getElementById('doc-id').value;
+        const payload = {
+            employee_id: document.getElementById('doc-emp-id').value,
+            doc_type: document.getElementById('doc-type').value,
+            doc_number: document.getElementById('doc-number').value,
+            expiry_date: document.getElementById('doc-expiry').value
+        };
+
+        try {
+            let error;
+            if (recordId) {
+                const res = await window.db.from('employee_documents').update(payload).eq('id', recordId);
+                error = res.error;
+            } else {
+                const res = await window.db.from('employee_documents').insert([payload]);
+                error = res.error;
+            }
+
+            if (error) throw error;
+
+            closeDocModal();
+            loadDocuments(); // Refresh Traffic table securely
+
+        } catch (error) {
+            console.error(error);
+            alert("حدث خطأ أثناء الحفظ. تأكد من صحة البيانات.");
+        } finally {
+            btn.innerHTML = ogHtml;
+            btn.disabled = false;
+        }
+    });
+
+    // 7. Operations (Edit/Delete)
+    window.editDoc = async function(id, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+        if (window.hasPerm && !window.hasPerm('compliance', 'edit')) return alert('ليس لديك صلاحية بالتعديل.');
+        // Find locally
+        const doc = globalDocsList.find(d => d.id === id);
+        if (!doc) return;
+
+        openDocModal();
+        document.getElementById('doc-modal-title').innerHTML = '<i class="fa-solid fa-pen"></i> <span>تعديل بيانات الوثيقة</span>';
+        document.getElementById('doc-id').value = doc.id;
+        document.getElementById('doc-emp-id').value = doc.employee_id;
+        document.getElementById('doc-type').value = doc.doc_type;
+        document.getElementById('doc-number').value = doc.doc_number;
+        document.getElementById('doc-expiry').value = doc.expiry_date;
+    };
+
+    window.deleteDoc = async function(id, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+        if (window.hasPerm && !window.hasPerm('compliance', 'delete')) return alert('ليس لديك صلاحية بالحذف.');
+        if (!confirm('تأكيد: هل تريد فعلاً حذف هذه الوثيقة من النظام؟')) return;
+
+        try {
+            const { error } = await window.db.from('employee_documents').delete().eq('id', id);
+            if (error) throw error;
+            loadDocuments();
+        } catch (err) {
+            console.error(err);
+            alert("فشل الحذف. يرجى المحاولة لاحقاً.");
+        }
+    };
+
+    // --- Quick Renewal Logic ---
+    window.openRenewModal = function(docId, currentDate, e) {
+        if (window.hasPerm && !window.hasPerm('compliance', 'edit')) {
+            return alert('Security Block: غير مصرح لك بهذا الإجراء.');
+        }
+        if (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+
+        document.getElementById('renew-form').reset();
+        document.getElementById('renew-doc-id').value = docId;
+        document.getElementById('renew-current-date').innerText = currentDate;
+
+        // Default new date to the current date just in case
+        document.getElementById('renew-new-date').value = currentDate;
+
+        const modal = document.getElementById('renew-modal');
+        const overlay = document.getElementById('renew-modal-overlay');
+        const content = document.getElementById('renew-modal-content');
+
+        modal.classList.remove('hidden');
+        void modal.offsetWidth;
+        overlay.classList.remove('opacity-0');
+        content.classList.remove('opacity-0', 'scale-95');
+    };
+
+    window.closeRenewModal = function() {
+        const overlay = document.getElementById('renew-modal-overlay');
+        const content = document.getElementById('renew-modal-content');
+        
+        document.getElementById('renew-form').reset();
+        document.getElementById('renew-doc-id').value = '';
+        
+        overlay.classList.add('opacity-0');
+        content.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => {
+            document.getElementById('renew-modal').classList.add('hidden');
+        }, 300);
+    };
+
+    window.applyQuickRenew = function(monthsToAdd) {
+        const currentStr = document.getElementById('renew-current-date').innerText;
+        if (!currentStr || currentStr === '--/--/----') return;
+
+        const dateObj = new Date(currentStr);
+        // Add months safely handling year rollovers
+        dateObj.setMonth(dateObj.getMonth() + monthsToAdd);
+
+        // Format to YYYY-MM-DD for the input[type=date]
+        const finalDateStr = dateObj.toISOString().split('T')[0];
+        document.getElementById('renew-new-date').value = finalDateStr;
+    }
+
+    document.getElementById('renew-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const btn = document.getElementById('btn-submit-renew');
+        const ogHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> تحديث...';
+        btn.disabled = true;
+
+        const recordId = document.getElementById('renew-doc-id').value;
+        const newExpiry = document.getElementById('renew-new-date').value;
+
+        try {
+            const { error } = await window.db.from('employee_documents')
+                .update({ expiry_date: newExpiry })
+                .eq('id', recordId);
+
+            if (error) throw error;
+
+            closeRenewModal();
+            loadDocuments();
+        } catch (error) {
+            console.error(error);
+            alert("حدث خطأ أثناء حفظ التجديد السريع.");
+        } finally {
+            btn.innerHTML = ogHtml;
+            btn.disabled = false;
+        }
+    });
+
+    // Boot
+    initCompliance();
+
+    // --- ENFORCE MATRIX PERMISSIONS ON GLOBAL ADD BUTTON ---
+    setTimeout(() => {
+        const addDocBtn = document.querySelector('button[onclick="openDocModal()"]');
+        if (addDocBtn && window.hasPerm && !window.hasPerm('compliance', 'add')) {
+            addDocBtn.style.display = 'none';
+        }
+    }, 100);
+</script>

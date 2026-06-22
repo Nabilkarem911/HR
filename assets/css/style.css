@@ -1,0 +1,127 @@
+/* Custom CSS overrides and animations */
+
+@layer utilities {
+    .glass-effect {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* Page transition animations */
+.page-enter {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Active Navigation Link styling */
+.nav-link.active {
+    background-color: #0ea5e9; /* primary */
+    color: white;
+    font-weight: 500;
+}
+.nav-link.active i {
+    color: white !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1; 
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; 
+}
+
+/* Utility to flip elements in RTL if they don't flip implicitly via FontAwesome */
+.rtl-flip {
+    transform: scaleX(-1);
+}
+/*  ⁄œÌ· ‘«„· ·ﬂ· «·‹ Popups ›Ì «·”Ì” „ */
+.ant-modal {
+    margin: 0 auto; /* Added to center horizontally */
+    width: 85% !important; /* ⁄—÷ „‰«”» ·ﬂ· «·‘«‘«  */
+    max-width: 1300px !important;
+    top: 30px !important; /* „”«›… »”Ìÿ… „‰ «·√⁄·Ï */
+    padding-bottom: 30px !important;
+    position: relative;
+    border-radius: 12px;
+}
+
+.ant-modal-content {
+    /* ≈Ã»«— «·»Ê» √» ⁄·Ï √Œ– 90% „‰ ÿÊ· «·‘«‘… */
+    height: 90vh !important; 
+    display: flex !important;
+    flex-direction: column !important;
+    background-color: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 24px 38px 3px rgb(0 0 0 / 0.14);
+}
+
+.ant-modal-header {
+    border-bottom: 1px solid rgba(76, 29, 149, 0.5);
+    background: linear-gradient(to right, #5b21b6, #86198f);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.ant-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+}
+
+.ant-modal-header button {
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ant-modal-header button:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.ant-modal-body {
+    flex: 1 !important;
+    overflow-y: auto !important; /*  ›⁄Ì· «·”ﬂ—Ê· ·Ê «·»Ì«‰«  ﬂ Ì— */
+    padding: 30px !important;
+    background-color: #f8fafc;
+}
+
+/* ·÷„«‰  Ê«›ﬁ «· ’„Ì„ „⁄ «·‘«‘«  «·’€Ì—… */
+@media (max-height: 700px) {
+    .ant-modal-content {
+        height: 95vh !important;
+    }
+}

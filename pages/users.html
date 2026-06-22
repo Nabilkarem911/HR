@@ -1,0 +1,611 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+        <div class="relative z-10">
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fa-solid fa-user-shield text-emerald-500"></i>
+                إدارة مستخدمي النظام (System Users)
+            </h2>
+            <p class="text-slate-500 mt-1 max-w-xl">هؤلاء هم الأشخاص المصرح لهم بالدخول للوحة التحكم والموارد البشرية.
+                خصص صلاحياتهم بعناية.</p>
+        </div>
+        <div class="relative z-10 w-full md:w-auto mt-4 md:mt-0">
+            <button onclick="openSystemUserModal()"
+                class="bg-emerald-500 text-white px-5 py-2.5 rounded-lg shadow-sm hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2 font-bold w-full md:w-auto">
+                <i class="fa-solid fa-user-plus"></i> إضافة مستخدم نظام جديد
+            </button>
+        </div>
+    </div>
+
+    <div
+        class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+            <h3 class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-gears text-primary"></i>
+                إعدادات النظام العامة</h3>
+            <p class="text-xs text-slate-500 mt-1">تؤثر هذه الأرقام مباشرة على عمليات محرك الرواتب والخصومات.</p>
+        </div>
+        <div class="flex items-end gap-3 w-full md:w-auto">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">أيام العمل القياسية للشهر</label>
+                <input type="number" id="setting-month-days"
+                    class="w-32 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary text-center"
+                    value="30">
+            </div>
+            <button onclick="saveGlobalSettings()" id="btn-save-settings"
+                class="bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-colors text-sm font-bold flex items-center gap-2">
+                <i class="fa-solid fa-save"></i> حفظ الإعدادات
+            </button>
+        </div>
+    </div>
+
+    <!-- System Users Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto min-h-[300px] relative">
+            <div id="users-loading"
+                class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 hidden flex-col items-center justify-center">
+                <div
+                    class="animate-spin inline-block w-8 h-8 border-[3px] border-emerald-500 border-t-transparent rounded-full mb-3">
+                </div>
+            </div>
+
+            <table class="w-full text-right" id="users-table">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm">
+                    <tr>
+                        <th class="px-5 py-4 font-bold">المستخدم / الايميل</th>
+                        <th class="px-5 py-4 font-bold text-center">الدور (Role)</th>
+                        <th class="px-5 py-4 font-bold text-center">المنشأة المخصصة</th>
+                        <th class="px-5 py-4 font-bold text-center">الصلاحيات المخصصة</th>
+                        <th class="px-5 py-4 font-bold text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm" id="users-tbody">
+                    <!-- Loaded via JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit System User Modal -->
+<div id="sys-user-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden">
+
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50">
+            <h3 class="font-bold text-lg text-slate-800" id="su-modal-title">إضافة مستخدم نظام جديد</h3>
+            <button type="button" onclick="closeSystemUserModal()"
+                class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <form id="sys-user-form" class="p-5 overflow-y-auto flex-1 space-y-5">
+            <input type="hidden" id="su-id" value="">
+
+            <!-- Basic Info Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">الاسم الكامل *</label>
+                    <input type="text" id="su-name" required
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        placeholder="مثال: أحمد الإداري">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">البريد الإلكتروني للذكول *</label>
+                    <input type="email" id="su-email" required
+                        class="w-full text-left border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        dir="ltr" placeholder="admin@domain.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">رقم الجوال (اختياري)</label>
+                    <input type="text" id="su-phone"
+                        class="w-full text-left border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        dir="ltr" placeholder="05XXXXXXXX">
+                </div>
+                <div id="su-pass-wrapper">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">كلمة المرور * <span id="su-pass-hint"
+                            class="text-xs text-slate-400 font-normal hidden">(اتركه فارغاً للحفاظ على
+                            القديمة)</span></label>
+                    <input type="password" id="su-pass" required
+                        class="w-full text-left border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                        dir="ltr" minlength="6" placeholder="******">
+                </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- RBAC Roles & Companies Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">الدور الأساسي (Role) *</label>
+                    <select id="su-role" required
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-medium">
+                        <option value="super_admin">مدير عام للنظام (Super Admin)</option>
+                        <option value="hr_manager">مدير موارد بشرية (HR Manager)</option>
+                        <option value="branch_manager">مدير فرع (Branch Manager)</option>
+                        <option value="viewer">مُشاهد (Viewer)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">المنشأة المخصصة (الفرع)</label>
+                    <select id="su-company"
+                        class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-slate-50">
+                        <option value="">-- كل المنشآت (وصول شامل) --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Custom Permissions Matrix -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden mt-4">
+                <h4 class="font-bold text-sm text-white bg-slate-800 p-3 flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells-large"></i> مصفوفة الصلاحيات الدقيقة (Matrix Permissions)
+                </h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-right text-sm border-collapse">
+                        <thead class="bg-slate-200 text-slate-700">
+                            <tr>
+                                <th class="p-2 border border-slate-300 w-1/4">الموديول / الشاشة</th>
+                                <th class="p-2 border border-slate-300 text-center">عرض</th>
+                                <th class="p-2 border border-slate-300 text-center">إضافة</th>
+                                <th class="p-2 border border-slate-300 text-center">تعديل/اعتماد</th>
+                                <th class="p-2 border border-slate-300 text-center">حذف</th>
+                                <th class="p-2 border border-slate-300">حجب بيانات (Field Level)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white">
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-chart-pie text-slate-400 ml-1"></i> لوحة التحكم</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-dash-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100" colspan="4"><span
+                                        class="text-xs text-slate-400">للعرض فقط</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-building text-slate-400 ml-1"></i> المنشآت والفروع</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-comp-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-comp-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-comp-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-comp-delete" class="w-4 h-4 text-rose-500 rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-users text-slate-400 ml-1"></i> الموظفين</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-emp-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-emp-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-emp-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-emp-delete" class="w-4 h-4 text-rose-500 rounded"></td>
+                                <td class="p-2 border border-slate-200">
+                                    <label
+                                        class="flex items-center gap-1 cursor-pointer text-xs font-bold text-rose-600"><input
+                                            type="checkbox" id="mat-emp-hide_salary" class="rounded text-rose-500">
+                                        إخفاء الرواتب المالية</label>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-clock-rotate-left text-slate-400 ml-1"></i> الحضور والانصراف
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-att-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-att-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-att-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100" colspan="2"></td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-calendar-check text-slate-400 ml-1"></i> الطلبات (سلف/إجازات)
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-req-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-req-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-req-edit" class="w-4 h-4 text-emerald-600 rounded" title="قبول ورفض">
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100" colspan="2"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-money-check-dollar text-slate-400 ml-1"></i> مسير الرواتب
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-pay-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-pay-add" class="w-4 h-4 text-primary rounded" title="تشغيل المسير"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-pay-edit" class="w-4 h-4 text-emerald-600 rounded" title="اعتماد نهائي">
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                                <td class="p-2 border border-slate-200">
+                                    <label
+                                        class="flex items-center gap-1 cursor-pointer text-xs font-bold text-rose-600"><input
+                                            type="checkbox" id="mat-pay-hide_net" class="rounded text-rose-500"> إخفاء
+                                        الصافي والمبالغ</label>
+                                </td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-file-signature text-slate-400 ml-1"></i> مركز الإصدارات</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-let-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-let-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100" colspan="3"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-shield-halved text-slate-400 ml-1"></i> الامتثال والوثائق
+                                </td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-cmp-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-cmp-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-cmp-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-cmp-delete" class="w-4 h-4 text-rose-500 rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                            </tr>
+                            <tr class="bg-slate-50/50">
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-boxes-stacked text-slate-400 ml-1"></i> العهد والأصول</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-ast-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-ast-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-ast-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-ast-delete" class="w-4 h-4 text-rose-500 rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-car-side text-slate-400 ml-1"></i> السيارات</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-veh-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-veh-add" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-veh-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-veh-delete" class="w-4 h-4 text-rose-500 rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-200 font-bold text-slate-800"><i
+                                        class="fa-solid fa-gears text-slate-400 ml-1"></i> إعدادات النظام</td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-set-view" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100"></td>
+                                <td class="p-2 border border-slate-200 text-center"><input type="checkbox"
+                                        id="mat-set-edit" class="w-4 h-4 text-primary rounded"></td>
+                                <td class="p-2 border border-slate-200 text-center bg-slate-100" colspan="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="submit" id="btn-submit-su"
+                    class="px-6 py-2.5 rounded-lg text-white bg-emerald-500 hover:bg-emerald-600 transition-colors font-bold text-sm flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-save"></i> حفظ البيانات
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // System State
+    let systemUsersList = [];
+    let companiesDict = {};
+    let loggedInUserId = null;
+
+    // Default Matrices
+    const defaultPermissions = {
+        'super_admin': {
+            dashboard: { view: true }, companies: { view: true, add: true, edit: true, delete: true },
+            employees: { view: true, add: true, edit: true, delete: true, hide_salary: false },
+            attendance: { view: true, add: true, edit: true }, requests: { view: true, add: true, edit: true },
+            payroll: { view: true, add: true, edit: true, hide_net: false }, letters: { view: true, add: true },
+            compliance: { view: true, add: true, edit: true, delete: true }, assets: { view: true, add: true, edit: true, delete: true },
+            vehicles: { view: true, add: true, edit: true, delete: true },
+            settings: { view: true, edit: true }
+        },
+        'hr_manager': {
+            dashboard: { view: true }, companies: { view: true, add: false, edit: false, delete: false },
+            employees: { view: true, add: true, edit: true, delete: false, hide_salary: false },
+            attendance: { view: true, add: true, edit: true }, requests: { view: true, add: true, edit: true },
+            payroll: { view: true, add: true, edit: false, hide_net: false }, letters: { view: true, add: true },
+            compliance: { view: true, add: true, edit: true, delete: false }, assets: { view: true, add: true, edit: true, delete: false },
+            vehicles: { view: true, add: true, edit: true, delete: false },
+            settings: { view: false, edit: false }
+        },
+        'branch_manager': {
+            dashboard: { view: true }, companies: { view: false, add: false, edit: false, delete: false },
+            employees: { view: true, add: false, edit: false, delete: false, hide_salary: true },
+            attendance: { view: true, add: true, edit: true }, requests: { view: true, add: true, edit: true },
+            payroll: { view: true, add: false, edit: false, hide_net: true }, letters: { view: false, add: false },
+            compliance: { view: false, add: false, edit: false, delete: false }, assets: { view: true, add: false, edit: false, delete: false },
+            vehicles: { view: true, add: false, edit: false, delete: false },
+            settings: { view: false, edit: false }
+        },
+        'viewer': {
+            dashboard: { view: true }, companies: { view: false }, employees: { view: true, hide_salary: true },
+            attendance: { view: true }, requests: { view: true }, payroll: { view: false, hide_net: true },
+            letters: { view: false }, compliance: { view: false }, assets: { view: true }, vehicles: { view: true, add: false, edit: false, delete: false }, settings: { view: false }
+        }
+    };
+
+    const roleBadges = {
+        'super_admin': { text: 'مدير عام', classes: 'bg-purple-100 text-purple-800 border border-purple-200', icon: 'fa-crown' },
+        'hr_manager': { text: 'موارد بشرية', classes: 'bg-emerald-100 text-emerald-800 border border-emerald-200', icon: 'fa-user-tie' },
+        'branch_manager': { text: 'مدير فرع', classes: 'bg-blue-100 text-blue-800 border border-blue-200', icon: 'fa-building' },
+        'viewer': { text: 'مشاهد', classes: 'bg-slate-100 text-slate-600 border border-slate-200', icon: 'fa-eye' }
+    };
+
+    // Helper to fill matrix checkboxes and clear old state
+    function fillMatrix(pObj) {
+        document.querySelectorAll('input[id^="mat-"]').forEach(el => el.checked = false);
+        if (!pObj) return;
+        const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val === true; };
+        if (pObj.dashboard) { setChk('mat-dash-view', pObj.dashboard.view); }
+        if (pObj.companies) { setChk('mat-comp-view', pObj.companies.view); setChk('mat-comp-add', pObj.companies.add); setChk('mat-comp-edit', pObj.companies.edit); setChk('mat-comp-delete', pObj.companies.delete); }
+        if (pObj.employees) { setChk('mat-emp-view', pObj.employees.view); setChk('mat-emp-add', pObj.employees.add); setChk('mat-emp-edit', pObj.employees.edit); setChk('mat-emp-delete', pObj.employees.delete); setChk('mat-emp-hide_salary', pObj.employees.hide_salary); }
+        if (pObj.attendance) { setChk('mat-att-view', pObj.attendance.view); setChk('mat-att-add', pObj.attendance.add); setChk('mat-att-edit', pObj.attendance.edit); }
+        if (pObj.requests) { setChk('mat-req-view', pObj.requests.view); setChk('mat-req-add', pObj.requests.add); setChk('mat-req-edit', pObj.requests.edit); }
+        if (pObj.payroll) { setChk('mat-pay-view', pObj.payroll.view); setChk('mat-pay-add', pObj.payroll.add); setChk('mat-pay-edit', pObj.payroll.edit); setChk('mat-pay-hide_net', pObj.payroll.hide_net); }
+        if (pObj.letters) { setChk('mat-let-view', pObj.letters.view); setChk('mat-let-add', pObj.letters.add); }
+        if (pObj.compliance) { setChk('mat-cmp-view', pObj.compliance.view); setChk('mat-cmp-add', pObj.compliance.add); setChk('mat-cmp-edit', pObj.compliance.edit); setChk('mat-cmp-delete', pObj.compliance.delete); }
+        if (pObj.assets) { setChk('mat-ast-view', pObj.assets.view); setChk('mat-ast-add', pObj.assets.add); setChk('mat-ast-edit', pObj.assets.edit); setChk('mat-ast-delete', pObj.assets.delete); }
+        if (pObj.vehicles) { setChk('mat-veh-view', pObj.vehicles.view); setChk('mat-veh-add', pObj.vehicles.add); setChk('mat-veh-edit', pObj.vehicles.edit); setChk('mat-veh-delete', pObj.vehicles.delete); }
+        if (pObj.settings) { setChk('mat-set-view', pObj.settings.view); setChk('mat-set-edit', pObj.settings.edit); }
+    }
+
+    /* ==========================================================================
+       INITIALIZATION & LOADING
+    ========================================================================== */
+    async function initUsersModule() {
+        if (!window.db) return;
+        try {
+            const { data: { user } } = await window.db.auth.getUser();
+            if (user) loggedInUserId = user.id;
+
+            const { data: cData } = await window.db.from('companies').select('id, name');
+            const cSelect = document.getElementById('su-company');
+            if (cData) {
+                cData.forEach(c => {
+                    companiesDict[c.id] = c.name;
+                    cSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                });
+            }
+            await loadSystemUsers();
+        } catch (e) { console.error("Init Error:", e); }
+    }
+
+    async function loadSystemUsers() {
+        const tbody = document.getElementById('users-tbody');
+        const loader = document.getElementById('users-loading');
+        loader.classList.remove('hidden'); loader.classList.add('flex');
+
+        try {
+            const { data, error } = await window.db.from('system_users').select('id, email, full_name, role, company_id, custom_permissions, phone').order('created_at', { ascending: false });
+            if (error) throw error;
+
+            systemUsersList = data || [];
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-500 font-bold bg-slate-50/50">لا يوجد مستخدمين مسجلين.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            data.forEach((u, index) => {
+                const b = roleBadges[u.role] || roleBadges['viewer'];
+                const compName = u.company_id && companiesDict[u.company_id] ? companiesDict[u.company_id] : '<span class="text-purple-600 font-bold">وصول شامل للكل</span>';
+
+                let permsObj = u.custom_permissions || {};
+                if (typeof permsObj === 'string') { try { permsObj = JSON.parse(permsObj); } catch (err) { } }
+                const permCount = Object.keys(permsObj).length > 0 ? 'مخصصة' : 'الافتراضية';
+                const isMe = (u.id === loggedInUserId) ? '<span class="bg-emerald-50 text-emerald-600 text-[10px] px-1.5 py-0.5 rounded border border-emerald-200 mr-2 font-bold">أنت</span>' : '';
+
+                html += `
+                    <tr class="hover:bg-slate-50/50 transition-colors">
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex items-center justify-center font-bold text-lg shadow-sm"><i class="fa-solid fa-user"></i></div>
+                                <div>
+                                    <div class="font-bold text-slate-800 text-sm whitespace-nowrap">${u.full_name || 'مستخدم نظام'} ${isMe}</div>
+                                    <div class="text-[12px] text-slate-500 font-mono mt-0.5" dir="ltr">${u.email || ''}</div>
+                                    ${u.phone ? `<div class="text-[11px] text-slate-400 font-mono mt-0.5" dir="ltr">${u.phone}</div>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-center"><span class="px-2.5 py-1 ${b.classes} rounded-md text-[11px] font-bold inline-flex items-center gap-1.5 shadow-sm whitespace-nowrap"><i class="fa-solid ${b.icon}"></i> ${b.text}</span></td>
+                        <td class="px-5 py-4 text-center text-[12px] font-medium text-slate-700">${compName}</td>
+                        <td class="px-5 py-4 text-center text-[12px] text-slate-500 font-mono"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">${permCount}</span></td>
+                        <td class="px-5 py-4 text-center w-28 text-nowrap">
+                            <button onclick="editSystemUser(${index})" class="text-slate-400 hover:text-blue-600 transition-colors px-1 py-1" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteSystemUser('${u.id}')" class="text-slate-400 hover:text-rose-600 transition-colors px-1 py-1" title="حذف" ${isMe ? 'disabled class="opacity-30 cursor-not-allowed"' : ''}><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        } catch (e) {
+            console.error("Load users DB error:", e);
+        } finally {
+            loader.classList.add('hidden'); loader.classList.remove('flex');
+        }
+    }
+
+    window.deleteSystemUser = async function (id) {
+        if (id === loggedInUserId) return alert('لا يمكنك حذف الحساب الخاص بك أثناء تسجيل الدخول منه.');
+        if (!confirm('هل تريد فعلاً إزالة مستخدم النظام هذا؟ لن يستطيع تسجيل الدخول لاحقاً.')) return;
+        try {
+            const { error } = await window.db.from('system_users').delete().eq('id', id);
+            if (error) throw error;
+            alert('تم حذف المستخدم بنجاح.');
+            loadSystemUsers();
+        } catch (e) { alert('حدث خطأ أثناء محاولة الحذف.'); }
+    }
+
+    /* ==========================================================================
+       MODAL OPERATIONS
+    ========================================================================== */
+    const modalInstance = document.getElementById('sys-user-modal');
+
+    window.openSystemUserModal = function () {
+        if (modalInstance.parentNode !== document.body) document.body.appendChild(modalInstance);
+        document.getElementById('su-modal-title').innerText = 'إضافة مستخدم نظام جديد';
+        document.getElementById('su-id').value = '';
+        document.getElementById('sys-user-form').reset();
+        document.getElementById('su-email').disabled = false;
+        document.getElementById('su-pass').required = true;
+        document.getElementById('su-pass-hint').classList.add('hidden');
+        document.getElementById('su-role').value = 'hr_manager';
+        document.getElementById('btn-submit-su').innerHTML = '<i class="fa-solid fa-user-plus"></i> إنشاء مستخدم';
+        document.getElementById('su-role').dispatchEvent(new Event('change'));
+        modalInstance.classList.remove('hidden'); modalInstance.classList.add('flex');
+    }
+
+    window.editSystemUser = function (index) {
+        const u = systemUsersList[index];
+        if (!u) return;
+        if (modalInstance.parentNode !== document.body) document.body.appendChild(modalInstance);
+        document.getElementById('su-modal-title').innerText = 'تعديل صلاحيات المستخدم';
+        document.getElementById('su-id').value = u.id;
+        document.getElementById('su-name').value = u.full_name || '';
+        document.getElementById('su-email').value = u.email || '';
+        document.getElementById('su-phone').value = u.phone || '';
+        document.getElementById('su-pass').required = false;
+        document.getElementById('su-pass').value = '';
+        document.getElementById('su-pass-hint').classList.remove('hidden');
+        document.getElementById('su-role').value = u.role || 'viewer';
+        document.getElementById('su-company').value = u.company_id || '';
+
+        let pObj = u.custom_permissions || {};
+        if (typeof pObj === 'string') { try { pObj = JSON.parse(pObj); } catch (err) { } }
+
+        document.getElementById('su-role').dispatchEvent(new Event('change'));
+        if (Object.keys(pObj).length > 0) fillMatrix(pObj);
+
+        document.getElementById('btn-submit-su').innerHTML = '<i class="fa-solid fa-save"></i> حفظ التعديلات';
+        modalInstance.classList.remove('hidden'); modalInstance.classList.add('flex');
+    }
+
+    window.closeSystemUserModal = function () {
+        modalInstance.classList.add('hidden'); modalInstance.classList.remove('flex');
+    }
+
+    document.getElementById('su-role').addEventListener('change', function (e) {
+        const role = this.value;
+        const compDrop = document.getElementById('su-company');
+        if (role === 'super_admin') {
+            compDrop.value = '';
+            compDrop.disabled = true;
+        } else {
+            compDrop.disabled = false;
+        }
+        fillMatrix(defaultPermissions[role] || defaultPermissions['viewer']);
+    });
+
+    /* ==========================================================================
+       BULLETPROOF TRIGGER-SAFE SUBMISSION LOGIC
+    ========================================================================== */
+    document.getElementById('sys-user-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const isUpdate = document.getElementById('su-id').value !== '';
+        const id = document.getElementById('su-id').value;
+        const name = document.getElementById('su-name').value;
+        const role = document.getElementById('su-role').value;
+        const rawComp = document.getElementById('su-company').value;
+        const comp = (role === 'super_admin' || rawComp === '') ? null : rawComp;
+        const email = document.getElementById('su-email').value.trim();
+        const phone = document.getElementById('su-phone').value.trim() || null;
+
+        if (role === 'branch_manager' && !comp) return alert('مدير الفرع يجب أن يكون مرتبطاً بمنشأة مخصصة محددة. يرجى اختيارها.');
+
+        const getChk = (id) => { const el = document.getElementById(id); return el ? el.checked : false; };
+        let jsonPerms = {
+            dashboard: { view: getChk('mat-dash-view') }, companies: { view: getChk('mat-comp-view'), add: getChk('mat-comp-add'), edit: getChk('mat-comp-edit'), delete: getChk('mat-comp-delete') },
+            employees: { view: getChk('mat-emp-view'), add: getChk('mat-emp-add'), edit: getChk('mat-emp-edit'), delete: getChk('mat-emp-delete'), hide_salary: getChk('mat-emp-hide_salary') },
+            attendance: { view: getChk('mat-att-view'), add: getChk('mat-att-add'), edit: getChk('mat-att-edit') }, requests: { view: getChk('mat-req-view'), add: getChk('mat-req-add'), edit: getChk('mat-req-edit') },
+            payroll: { view: getChk('mat-pay-view'), add: getChk('mat-pay-add'), edit: getChk('mat-pay-edit'), hide_net: getChk('mat-pay-hide_net') }, letters: { view: getChk('mat-let-view'), add: getChk('mat-let-add') },
+            compliance: { view: getChk('mat-cmp-view'), add: getChk('mat-cmp-add'), edit: getChk('mat-cmp-edit'), delete: getChk('mat-cmp-delete') }, assets: { view: getChk('mat-ast-view'), add: getChk('mat-ast-add'), edit: getChk('mat-ast-edit'), delete: getChk('mat-ast-delete') },
+            vehicles: { view: getChk('mat-veh-view'), add: getChk('mat-veh-add'), edit: getChk('mat-veh-edit'), delete: getChk('mat-veh-delete') },
+            settings: { view: getChk('mat-set-view'), edit: getChk('mat-set-edit') }
+        };
+
+        const btn = document.getElementById('btn-submit-su');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+        btn.disabled = true;
+
+        try {
+            const payload = { email: email, phone: phone, full_name: name, role: role, company_id: comp, custom_permissions: jsonPerms };
+
+            if (isUpdate) {
+                const { error: updateErr } = await window.db.from('system_users').update(payload).eq('id', id);
+                if (updateErr) throw new Error(updateErr.code === '23505' ? 'رقم الجوال أو البريد الإلكتروني مستخدم بالفعل.' : updateErr.message);
+                alert('تم تحديث بيانات المستخدم بنجاح!');
+                closeSystemUserModal();
+                loadSystemUsers();
+            } else {
+                const pass = document.getElementById('su-pass').value.trim();
+                if (!pass || pass.length < 6) throw new Error('كلمة المرور يجب ألا تقل عن 6 أحرف.');
+
+                // Create user via API (handles password hashing + insert)
+                payload.password = pass;
+                const { error: createErr } = await window.db.from('system_users').insert(payload);
+                if (createErr) throw new Error(createErr.code === '23505' ? 'هذا البريد الإلكتروني مسجل مسبقاً.' : createErr.message);
+
+                alert('تم إنشاء المستخدم وتخصيص صلاحياته بنجاح!');
+                closeSystemUserModal();
+                loadSystemUsers();
+            }
+        } catch (e) {
+            console.error("Submission Error:", e);
+            alert(e.message || 'فشلت العملية.');
+        } finally {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+        }
+    });
+
+    // Global Settings Logic
+    async function loadGlobalSettings() {
+        try {
+            const { data } = await window.db.from('system_settings').select('setting_value').eq('setting_key', 'standard_month_days').single();
+            if (data) document.getElementById('setting-month-days').value = data.setting_value;
+        } catch (e) { }
+    }
+    window.saveGlobalSettings = async function () {
+        const btn = document.getElementById('btn-save-settings');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+        try {
+            await window.db.from('system_settings').update({ setting_value: document.getElementById('setting-month-days').value }).eq('setting_key', 'standard_month_days');
+            alert('تم تحديث إعدادات النظام بنجاح!');
+        } catch (e) { alert('خطأ في الحفظ'); }
+        btn.innerHTML = '<i class="fa-solid fa-save"></i> حفظ الإعدادات';
+    }
+    setTimeout(loadGlobalSettings, 1000);
+    initUsersModule();
+</script>

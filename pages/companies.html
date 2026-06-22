@@ -1,0 +1,483 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fa-solid fa-building text-amber-500"></i>
+                إدارة المنشآت
+            </h2>
+            <p class="text-slate-500 mt-1">أضف المنشآت أو الفروع التابعة (مثل مطعم، مستودع، مصنع) لربط الموظفين بها
+                وتسهيل فلترتها.</p>
+        </div>
+        <div>
+            <button onclick="openCompanyModal()"
+                class="bg-amber-500 text-white px-5 py-2 rounded-lg shadow-sm hover:bg-amber-600 transition-colors flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-plus"></i> إضافة منشأة جديدة
+            </button>
+        </div>
+    </div>
+
+    <!-- Companies Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right" id="companies-table">
+                <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
+                    <tr>
+                        <th class="px-6 py-4 font-semibold">اسم المنشأة</th>
+                        <th class="px-6 py-4 font-semibold text-center">تاريخ الإضافة</th>
+                        <th class="px-6 py-4 font-semibold text-center">الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm" id="companies-tbody">
+                    <tr>
+                        <td colspan="3" class="text-center py-10">
+                            <div
+                                class="animate-spin inline-block w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full">
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="company-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md md:max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 id="modal-comp-title" class="font-bold text-lg text-slate-800">إضافة منشأة</h3>
+            <button onclick="closeCompanyModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <form id="company-form" class="p-5 overflow-y-auto flex-1">
+            <input type="hidden" id="comp-id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">اسم المنشأة *</label>
+                <input type="text" id="comp-name" required
+                    class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+            </div>
+            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="submit" id="btn-submit-comp"
+                    class="px-5 py-2 rounded-lg text-white bg-amber-500 hover:bg-amber-600 transition-colors font-medium">حفظ</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Company 360 Modal (New Architecture) -->
+    <div id="company-360-modal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden transform transition-all duration-300 scale-95 opacity-0"
+            id="comp-360-content">
+            <!-- Header -->
+            <div
+                class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50 relative overflow-hidden shrink-0">
+                <div class="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent pointer-events-none">
+                </div>
+                <div class="relative z-10 flex items-center gap-4">
+                    <div
+                        class="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-inner shadow-amber-700/50">
+                        <i class="fa-regular fa-building"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-black text-2xl text-slate-800" id="modal-360-title">اسم المنشأة</h3>
+                        <p class="text-xs text-slate-500 font-bold mt-1 tracking-wide" id="modal-360-id">ID: ...</p>
+                    </div>
+                </div>
+                <button onclick="closeCompany360()"
+                    class="text-slate-400 hover:text-rose-500 transition-colors relative z-10 w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full shadow-sm hover:bg-rose-50 hover:border-rose-200 group">
+                    <i class="fa-solid fa-times text-lg group-hover:scale-110 transition-transform"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <div class="flex px-6 border-b border-slate-200 bg-white shadow-sm shrink-0">
+                <button onclick="switchCompanyTab('tab-comp-basic')" id="btn-tab-comp-basic"
+                    class="comp-tab-btn text-amber-600 border-b-2 border-amber-500 font-bold px-5 py-4 text-sm flex items-center gap-2 transition-colors relative">
+                    <i class="fa-solid fa-circle-info"></i> البيانات الأساسية
+                </button>
+                <button onclick="switchCompanyTab('tab-comp-emps')" id="btn-tab-comp-emps"
+                    class="comp-tab-btn text-slate-500 hover:text-slate-800 border-b-2 border-transparent font-medium px-5 py-4 text-sm flex items-center gap-2 transition-colors relative">
+                    <i class="fa-solid fa-users"></i> القوة العاملة المسكنة
+                    <span id="tab-comp-emps-badge"
+                        class="absolute -top-1 -right-2 bg-indigo-100 text-indigo-600 text-[10px] font-black px-1.5 py-0.5 rounded-full hidden">0</span>
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" id="comp-360-scroll-area">
+
+                <!-- Tab 1: Basic Info Edit Form -->
+                <div id="tab-comp-basic" class="comp-tab-content block space-y-6">
+                    <div
+                        class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group hover:border-amber-200 transition-colors">
+                        <div class="absolute top-0 right-0 w-1 h-full bg-amber-400"></div>
+                        <h4 class="font-bold text-slate-800 mb-5 flex items-center gap-2 text-lg">
+                            <i class="fa-solid fa-pen-to-square text-amber-500"></i> تعديل بيانات المنشأة
+                        </h4>
+                        <form id="company-edit-form" class="space-y-5">
+                            <input type="hidden" id="edit-comp-id">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">اسم المنشأة / الفرع الرسمي
+                                    <span class="text-rose-500">*</span></label>
+                                <input type="text" id="edit-comp-name" required
+                                    class="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-slate-50 font-bold text-slate-800 text-lg transition-shadow">
+                            </div>
+                            <div class="flex justify-end pt-5 border-t border-slate-100">
+                                <button type="submit" id="btn-update-comp"
+                                    class="px-6 py-2.5 rounded-xl text-white bg-amber-500 hover:bg-amber-600 transition-all font-bold shadow-md shadow-amber-500/20 flex items-center gap-2 hover:shadow-lg hover:shadow-amber-500/40 active:scale-95">
+                                    <i class="fa-solid fa-save"></i> حفظ التعديلات الان
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Employees Table View -->
+                <div id="tab-comp-emps" class="comp-tab-content hidden">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+                        <div
+                            class="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center sticky top-0 z-20">
+                            <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-users text-indigo-500"></i> الموظفين المسكنين مالياً وإدارياً
+                            </h4>
+                            <span id="comp-emps-count"
+                                class="bg-indigo-100 text-indigo-700 text-xs px-3 py-1.5 rounded-lg font-black tracking-wide border border-indigo-200 shadow-sm">0
+                                موظف مسجل</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-right text-sm">
+                                <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                                    <tr>
+                                        <th class="px-5 py-4 font-bold w-1/3">الموظف</th>
+                                        <th class="px-5 py-4 font-bold text-center">المسمى الوظيفي</th>
+                                        <th class="px-5 py-4 font-bold text-center">الراتب الأساسي</th>
+                                        <th class="px-5 py-4 font-bold text-center">الحالة</th>
+                                        <th class="px-5 py-4 font-bold text-center">ملف الموظف</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50 text-slate-700" id="company-emps-tbody">
+                                    <!-- JS Injection point -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var compModal = document.getElementById('company-modal');
+
+        function openCompanyModal(id = '', name = '') {
+            // Move modal to body to overcome parent overflow constraints
+            if (compModal.parentNode !== document.body) {
+                document.body.appendChild(compModal);
+            }
+
+            compModal.classList.remove('hidden');
+            compModal.classList.add('flex');
+
+            // Lock background scrolling on main-content container
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) {
+                mainContent.style.overflow = 'hidden';
+            }
+
+            document.getElementById('comp-id').value = id;
+            document.getElementById('comp-name').value = name;
+            document.getElementById('modal-comp-title').innerText = id ? 'تعديل المنشأة' : 'إضافة منشأة';
+        }
+
+        function closeCompanyModal() {
+            compModal.classList.add('hidden');
+            compModal.classList.remove('flex');
+
+            // Restore background scrolling on main-content container
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) {
+                mainContent.style.overflow = 'auto';
+            }
+
+            document.getElementById('company-form').reset();
+        }
+
+        async function loadCompanies() {
+            if (!window.db) return;
+            const tbody = document.getElementById('companies-tbody');
+            try {
+                const { data, error } = await window.db.from('companies').select('*').order('created_at', { ascending: true });
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-500">لا يوجد منشآت مضافة.</td></tr>`;
+                    return;
+                }
+                let html = '';
+                data.forEach(c => {
+                    // Replace HTML logic to point to the new 360 logic instead of the old singular modal edit
+                    html += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-6 py-4 font-bold text-slate-800 w-1/2 flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center text-amber-500 shadow-inner border border-amber-200">
+                                <i class="fa-solid fa-building text-xl"></i>
+                            </div>
+                            <span class="text-base">${c.name}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center text-slate-500 text-sm align-middle font-bold">
+                            <i class="fa-solid fa-calendar-alt ml-1 text-slate-400"></i> ${new Date(c.created_at).toLocaleDateString()}
+                        </td>
+                        <td class="px-6 py-4 text-center align-middle">
+                            <div class="flex items-center justify-center gap-2 flex-row-reverse">
+                                ${(window.hasPerm && window.hasPerm('companies', 'edit')) ? `
+                                <button onclick="openCompany360('${c.id}', '${c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl transition-all text-sm font-bold inline-flex items-center gap-2 shadow-sm border border-indigo-100 group">
+                                    <i class="fa-solid fa-expand group-hover:scale-110 transition-transform"></i> فتح ملف المنشأة (360)
+                                </button>
+                                ` : ''}
+                                ${(window.hasPerm && window.hasPerm('companies', 'delete')) ? `
+                                <button onclick="deleteCompany('${c.id}', '${c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')}')" class="bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white w-10 h-10 flex items-center justify-center rounded-xl transition-all shadow-sm border border-rose-100 tooltip relative">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                ` : ''}
+                                ${(window.hasPerm && !window.hasPerm('companies', 'edit') && !window.hasPerm('companies', 'delete')) ? `<span class="text-xs text-slate-400"><i class="fa-solid fa-lock"></i></span>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                });
+                tbody.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-red-500 font-bold">Error: ${e.message || JSON.stringify(e)}</td></tr>`;
+            }
+        }
+
+        window.deleteCompany = async function (id, name) {
+            if (window.hasPerm && !window.hasPerm('companies', 'delete')) return alert('Security Block: غير مصرح لك بالحذف.');
+            if (!confirm(`هل أنت متأكد من حذف المنشأة "${name}"؟ سيتعذر الحذف إذا كان هناك موظفين مرتبطين بها.`)) return;
+            try {
+                const { error } = await window.db.from('companies').delete().eq('id', id);
+                if (error) {
+                    if (error.code === '23503') throw new Error("لا يمكن حذف المنشأة لوجود سجلات مرتبطة بها (موظفين، رواتب، الخ).");
+                    throw error;
+                }
+                alert('تم الحذف بنجاح.');
+                loadCompanies();
+            } catch (e) {
+                console.error(e);
+                alert(e.message || 'حدث خطأ أثناء الحذف.');
+            }
+        }
+
+        document.getElementById('company-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('comp-id').value;
+            const reqAction = id ? 'edit' : 'add';
+            if (window.hasPerm && !window.hasPerm('companies', reqAction)) return alert(`Security Block: غير مصرح لك بـ ${reqAction === 'edit' ? 'التعديل' : 'الإضافة'}.`);
+            const name = document.getElementById('comp-name').value;
+            try {
+                if (id) {
+                    const { error } = await window.db.from('companies').update({ name }).eq('id', id);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.db.from('companies').insert([{ name }]);
+                    if (error) throw error;
+                }
+                closeCompanyModal();
+                loadCompanies();
+            } catch (e) { console.error(e); alert('حدث خطأ'); }
+        });
+
+        // -------------------------------------------------------------
+        // COMPANY 360 MODAL LOGIC (New Architectural Upgrades)
+        // -------------------------------------------------------------
+        const comp360Modal = document.getElementById('company-360-modal');
+        const comp360Content = document.getElementById('comp-360-content');
+
+        window.openCompany360 = function (id, name) {
+            if (window.hasPerm && !window.hasPerm('companies', 'edit')) return alert('Security Block: غير مصرح لك بالتعديل.');
+            if (comp360Modal.parentNode !== document.body) document.body.appendChild(comp360Modal);
+
+            // Hydrate Basic Tab
+            document.getElementById('edit-comp-id').value = id;
+            document.getElementById('edit-comp-name').value = name;
+            document.getElementById('modal-360-title').innerText = name;
+            document.getElementById('modal-360-id').innerText = `ID: ${id.split('-')[0]}...`; // Shortened UUID look
+
+            // Setup Modal Visibility
+            comp360Modal.classList.remove('hidden');
+            comp360Modal.classList.add('flex');
+
+            // Animate modal entry
+            setTimeout(() => {
+                comp360Content.classList.remove('scale-95', 'opacity-0');
+                comp360Content.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) mainContent.style.overflow = 'hidden';
+
+            switchCompanyTab('tab-comp-basic');
+            loadCompanyEmployees(id);
+        }
+
+        window.closeCompany360 = function () {
+            // Animate exit
+            comp360Content.classList.remove('scale-100', 'opacity-100');
+            comp360Content.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                comp360Modal.classList.add('hidden');
+                comp360Modal.classList.remove('flex');
+                const mainContent = document.getElementById('main-content');
+                if (mainContent) mainContent.style.overflow = 'auto';
+            }, 250); // wait for tailwind transition config
+        }
+
+        window.switchCompanyTab = function (tabId) {
+            // Reset navigation styles
+            document.querySelectorAll('.comp-tab-btn').forEach(b => {
+                b.classList.remove('text-amber-600', 'border-amber-500', 'font-bold');
+                b.classList.add('text-slate-500', 'border-transparent', 'font-medium');
+            });
+
+            // Activate target button
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            activeBtn.classList.remove('text-slate-500', 'border-transparent', 'font-medium');
+            activeBtn.classList.add('text-amber-600', 'border-amber-500', 'font-bold');
+
+            // Toggle Content Visibility
+            document.querySelectorAll('.comp-tab-content').forEach(c => {
+                c.classList.remove('block');
+                c.classList.add('hidden');
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(tabId).classList.add('block');
+
+            // Reset scroll position gracefully
+            document.getElementById('comp-360-scroll-area').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function loadCompanyEmployees(compId) {
+            const tbody = document.getElementById('company-emps-tbody');
+            const countSpan = document.getElementById('comp-emps-count');
+            const badgeSpan = document.getElementById('tab-comp-emps-badge');
+
+            tbody.innerHTML = `<tr><td colspan="5" class="py-16 text-center"><i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-3xl mb-3 block"></i><span class="text-slate-400 font-bold">جاري تحميل موظفي المنشأة...</span></td></tr>`;
+
+            try {
+                const { data, error } = await window.db.from('employees')
+                    .select('id, first_name, last_name, job_title, basic_salary, status')
+                    .eq('company_id', compId)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                // Update counts across UI
+                countSpan.innerText = `${data.length} موظف مسجل`;
+                badgeSpan.innerText = data.length;
+                badgeSpan.classList.remove('hidden');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="py-12 bg-indigo-50/30 text-center"><div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-slate-300 mx-auto mb-4 border border-indigo-100 shadow-sm"><i class="fa-solid fa-users-slash text-2xl"></i></div><p class="text-slate-500 font-bold">لا يوجد موظفين مسكنين على هذه المنشأة حالياً.</p></td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                data.forEach(e => {
+                    const name = (`${e.first_name || ''} ${e.last_name || ''}`).trim() || 'بدون اسم';
+                    const statusHtml = e.status === 'active'
+                        ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap border border-emerald-200 shadow-sm inline-flex items-center gap-1.5"><i class="fa-solid fa-circle text-[8px] text-emerald-500"></i> نشط</span>`
+                        : `<span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap border border-slate-200 shadow-sm inline-flex items-center gap-1.5"><i class="fa-solid fa-circle text-[8px] text-slate-400"></i> معلق</span>`;
+
+                    html += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-sm shadow-inner group-hover:bg-indigo-100 group-hover:text-indigo-500 transition-colors">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <span class="font-bold text-slate-800 text-sm truncate max-w-[180px]" title="${name}">${name}</span>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-center text-slate-600 text-xs font-bold">${e.job_title || '-'}</td>
+                        <td class="px-5 py-4 text-center font-mono text-slate-600 text-sm font-bold bg-slate-50/50">${parseFloat(e.basic_salary).toLocaleString()} ر.س</td>
+                        <td class="px-5 py-4 text-center">${statusHtml}</td>
+                        <td class="px-5 py-4 text-center">
+                            <button onclick="routetoProfile('${e.id}')" class="text-indigo-600 bg-white border border-indigo-200 hover:bg-indigo-600 hover:text-white px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-2 mx-auto hover:shadow-md hover:border-indigo-600">
+                                فتح الملف <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                });
+                tbody.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center bg-rose-50/50"><i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl mb-2"></i><p class="text-rose-600 text-sm font-bold">حدث خطأ أثناء جلب سجلات الموظفين.</p></td></tr>`;
+            }
+        }
+
+        // Direct Hash Router to Employee Profile Module
+        window.routetoProfile = function (empId) {
+            // Save the intended employee lookup ID to localStorage for the employee-profile router to digest immediately
+            localStorage.setItem('force_load_employee', empId);
+            closeCompany360();
+            window.location.hash = '#employee-profile';
+        }
+
+        // Submit handler for Tab 1 (Basic Info) inside 360 modal
+        document.getElementById('company-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-comp-id').value;
+            const name = document.getElementById('edit-comp-name').value;
+            const btn = document.getElementById('btn-update-comp');
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري الحفظ...';
+
+                // Only update logic since "Create" goes through the main `company-modal`
+                const { error } = await window.db.from('companies').update({ name }).eq('id', id);
+                if (error) throw error;
+
+                // UI Reactivity Hooks
+                document.getElementById('modal-360-title').innerText = name;
+
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> تم تحديث السجل بنجاح';
+                btn.classList.replace('bg-amber-500', 'bg-emerald-500');
+                btn.classList.replace('hover:bg-amber-600', 'hover:bg-emerald-600');
+
+                // Reload background table dynamically without resetting session
+                loadCompanies();
+
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-save"></i> حفظ التعديلات الان';
+                    btn.classList.replace('bg-emerald-500', 'bg-amber-500');
+                    btn.classList.replace('hover:bg-emerald-600', 'hover:bg-amber-600');
+                }, 3000);
+
+            } catch (e) {
+                console.error(e);
+                alert('حدثت مشكلة أثناء محاولة حفظ التحديثات.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-save"></i> إعادة المحاولة';
+            }
+        });
+
+        loadCompanies();
+
+    // --- ENFORCE MATRIX PERMISSIONS ON GLOBAL ADD BUTTON ---
+    setTimeout(() => {
+        const addCompBtn = document.querySelector('button[onclick="openCompanyModal()"]');
+        if (addCompBtn && window.hasPerm && !window.hasPerm('companies', 'add')) {
+            addCompBtn.style.display = 'none';
+        }
+    }, 100);
+
+    </script>

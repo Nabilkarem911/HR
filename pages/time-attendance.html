@@ -1,0 +1,714 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<div class="space-y-6">
+    <!-- View Toggles (Header) -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 print:hidden">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3" id="page-main-title">
+                <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                أرشيف سجلات الدوام
+            </h2>
+            <p class="text-slate-500 mt-1" id="page-sub-title">إدارة سجلات وأرصدة الحضور المعتمدة للأشهر السابقة.</p>
+        </div>
+        <div>
+            <button id="btn-toggle-entry"
+                class="bg-primary text-white px-5 py-2 rounded-lg shadow-sm hover:bg-blue-600 transition-colors font-medium flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> <span id="toggle-entry-text">إدخال سجل شهر جديد</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== ARCHIVE VIEW ==================== -->
+    <div id="archive-view-container" class="space-y-4 font-sans block">
+        <!-- Optional Filters for Archive -->
+        <div class="flex flex-col sm:flex-row gap-3 items-center justify-end print:hidden">
+            <select id="archive-filter-company"
+                class="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 w-full sm:w-auto shadow-sm">
+                <option value="all">كل المنشآت</option>
+            </select>
+            <button onclick="loadArchive()"
+                class="bg-white text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors font-medium whitespace-nowrap">
+                <i class="fa-solid fa-rotate-right"></i> تحديث
+            </button>
+        </div>
+
+        <!-- Archive Grid/Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right" id="archive-table">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold w-32 text-center">الشهر والسنة</th>
+                            <th class="px-6 py-4 font-semibold">المنشأة</th>
+                            <th class="px-6 py-4 font-semibold text-center w-48">عدد الموظفين في السجل</th>
+                            <th class="px-6 py-4 font-semibold text-center">تاريخ الاعتماد</th>
+                            <th class="px-6 py-4 font-semibold text-center">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 text-sm" id="archive-tbody">
+                        <tr>
+                            <td colspan="5" class="text-center py-16">
+                                <div
+                                    class="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full">
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ENTRY/GRID VIEW ==================== -->
+    <div id="entry-view-container" class="space-y-6 hidden font-sans">
+        <!-- Entry Controls -->
+        <div
+            class="flex flex-col sm:flex-row gap-3 w-full bg-white p-4 rounded-xl shadow-sm border border-slate-100 items-center justify-between print:hidden">
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                <input type="month" id="filter-month"
+                    class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 w-full sm:w-auto font-mono">
+                <select id="filter-company"
+                    class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary text-slate-700 w-full sm:w-auto">
+                    <!-- Populated via JS -->
+                </select>
+            </div>
+            <button id="load-smart-grid"
+                class="w-full sm:w-auto bg-slate-800 text-white px-5 py-2 rounded-lg shadow-sm hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 font-medium whitespace-nowrap">
+                <i class="fa-solid fa-bolt text-amber-400"></i> جلب / إنشاء قائمة الموظفين
+            </button>
+        </div>
+
+        <!-- Export Actions -->
+        <div class="flex flex-wrap items-center justify-between print:hidden">
+            <h3 class="font-bold text-slate-700 text-lg hidden sm:block">سجل الشهر الذكي</h3>
+            <div class="flex flex-wrap justify-end gap-3 w-full sm:w-auto">
+                <button onclick="exportToCSV()"
+                    class="bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-100 px-4 py-2 rounded-lg shadow-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-csv"></i> CSV
+                </button>
+                <button onclick="exportToPDF()"
+                    class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 px-4 py-2 rounded-lg shadow-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </button>
+                <button onclick="window.print()"
+                    class="bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 px-4 py-2 rounded-lg shadow-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> طباعة
+                </button>
+                <button id="save-batch-attendance"
+                    class="bg-emerald-500 text-white px-5 py-2 rounded-lg shadow-sm hover:bg-emerald-600 transition-colors font-medium flex items-center justify-center gap-2 min-w-40 border border-emerald-600">
+                    <i class="fa-solid fa-save text-lg"></i> <span id="save-btn-text">حفظ واعتماد السجل</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Export Area / Print View -->
+        <div id="attendance-export-area"
+            class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+
+            <!-- Loading Overlay for Grid -->
+            <div id="grid-loading-overlay"
+                class="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 hidden flex-col items-center justify-center font-bold text-slate-500">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-primary mb-3"></i>
+                جاري المعالجة...
+            </div>
+
+            <!-- Print Header (Hidden on screen) -->
+            <div class="hidden print:block p-6 border-b border-slate-200">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">سجل الدوام الشهري المعتمد</h1>
+                        <p class="text-slate-500 mt-1">عن شهر: <span id="print-month-display"
+                                class="font-bold font-mono">--</span></p>
+                        <p class="text-slate-500">المنشأة: <span id="print-company-display"
+                                class="font-bold text-amber-600">--</span></p>
+                    </div>
+                    <div class="text-left font-mono text-sm text-slate-500">
+                        تاريخ الطباعة: <span id="print-date"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right" id="smart-grid-table">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm print:bg-slate-100">
+                        <tr>
+                            <th class="px-5 py-4 font-semibold w-1/4">الموظف / المنشأة</th>
+                            <th class="px-3 py-4 font-semibold text-center w-24">إجمالي أيام الشهر</th>
+                            <th class="px-3 py-4 font-semibold text-center w-24">أيام الحضور</th>
+                            <th class="px-3 py-4 font-semibold text-center w-24">أيام الغياب</th>
+                            <th class="px-3 py-4 font-semibold text-center w-24">ساعات الإضافي</th>
+                            <th class="px-3 py-4 font-semibold text-center w-24">ساعات التأخير</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 text-slate-700 text-sm" id="smart-grid-tbody">
+                        <tr>
+                            <td colspan="6" class="text-center py-20 bg-slate-50/50">
+                                <i class="fa-solid fa-magnifying-glass-chart text-4xl text-slate-300 mb-3 block"></i>
+                                <p class="text-slate-500 font-medium">الجدول الدائم فارغ حاليا.</p>
+                                <p class="text-xs text-slate-400 mt-1">الرجاء تحديد (الشهر) و (المنشأة) ثم الضغط على
+                                    "جلب قائمة الموظفين".</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Print Footer (Hidden on screen) -->
+            <div class="hidden print:flex justify-between items-end p-8 mt-10">
+                <div class="text-center">
+                    <p class="font-bold text-slate-700 mb-8 border-b border-slate-300 pb-2 inline-block min-w-[150px]">
+                        مُعد السجل</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-bold text-slate-700 mb-8 border-b border-slate-300 pb-2 inline-block min-w-[150px]">
+                        إدارة الموارد البشرية</p>
+                </div>
+                <div class="text-center">
+                    <p class="font-bold text-slate-700 mb-8 border-b border-slate-300 pb-2 inline-block min-w-[150px]">
+                        الاعتماد العام</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= GLOBAL STATE ================= */
+    let isEntryView = false;
+    let companiesLookup = {}; // { id: name } for quick mapping
+    let currentGridData = []; // State array corresponding to the grid rows
+    let currentDaysInMonth = 30; // Default
+
+    // Nodes
+    const archiveView = document.getElementById('archive-view-container');
+    const entryView = document.getElementById('entry-view-container');
+    const mainTitle = document.getElementById('page-main-title');
+    const subTitle = document.getElementById('page-sub-title');
+    const btnToggle = document.getElementById('btn-toggle-entry');
+    const btnToggleText = document.getElementById('toggle-entry-text');
+
+    const monthInput = document.getElementById('filter-month');
+    const compFilterInput = document.getElementById('filter-company');
+
+    // Print logic init
+    document.getElementById('print-date').innerText = new Date().toLocaleDateString('ar-EG');
+    const today = new Date();
+    monthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`; // Default
+
+    /* ================= INITIALIZATION & HELPERS ================= */
+    async function initPage() {
+        if (!window.db) return;
+
+        // Load Companies (For Filtering dropdowns)
+        try {
+            const { data } = await window.db.from('companies').select('id, name');
+            if (data) {
+                const fArchive = document.getElementById('archive-filter-company');
+                // By default keep "all"
+                let optsArchive = '<option value="all">كل المنشآت</option>';
+                // For Entry it's usually mandatory to pick one, but we'll allow "all" for bulk operations if requested
+                let optsEntry = '<option value="all">كل المنشآت المدمجة</option>';
+
+                data.forEach(c => {
+                    companiesLookup[c.id] = c.name;
+                    optsArchive += `<option value="${c.id}">${c.name}</option>`;
+                    optsEntry += `<option value="${c.id}">${c.name}</option>`;
+                });
+
+                fArchive.innerHTML = optsArchive;
+                compFilterInput.innerHTML = optsEntry;
+            }
+        } catch (e) {
+            console.error("Failed loading companies", e);
+        }
+
+        // Start by loading Archive
+        loadArchive();
+    }
+
+    function getDaysInMonth(year, month) {
+        return new Date(year, month, 0).getDate();
+    }
+
+
+    /* ================= TOGGLE VIEWS ================= */
+    btnToggle.addEventListener('click', () => {
+        isEntryView = !isEntryView;
+        if (isEntryView) {
+            // Switch to Entry
+            archiveView.classList.add('hidden');
+            archiveView.classList.remove('block');
+            entryView.classList.remove('hidden');
+            entryView.classList.add('block');
+
+            mainTitle.innerHTML = '<i class="fa-solid fa-table-list text-primary"></i> إدخال وتعديل سجلات الشهر';
+            subTitle.innerText = 'أدخل غيابات وإضافي الموظفين بشكل جماعي للمنشأة في شهر محدد.';
+            btnToggle.innerHTML = '<i class="fa-solid fa-arrow-right"></i> <span id="toggle-entry-text">العودة للأرشيف</span>';
+            btnToggle.classList.replace('bg-primary', 'bg-slate-200');
+            btnToggle.classList.replace('text-white', 'text-slate-800');
+            btnToggle.classList.replace('hover:bg-blue-600', 'hover:bg-slate-300');
+
+            // Clear current grid to prevent confusion
+            document.getElementById('smart-grid-tbody').innerHTML = `
+                <tr><td colspan="6" class="text-center py-20 bg-slate-50/50">
+                    <i class="fa-solid fa-magnifying-glass-chart text-4xl text-slate-300 mb-3 block"></i>
+                    <p class="text-slate-500 font-medium">الجدول فارغ.</p>
+                    <p class="text-xs text-slate-400 mt-1">الرجاء تحديد (الشهر) و (المنشأة) ثم الضغط على "جلب قائمة الموظفين".</p>
+                </td></tr>
+            `;
+            currentGridData = [];
+        } else {
+            // Switch to Archive
+            entryView.classList.add('hidden');
+            entryView.classList.remove('block');
+            archiveView.classList.remove('hidden');
+            archiveView.classList.add('block');
+
+            mainTitle.innerHTML = '<i class="fa-solid fa-clock-rotate-left text-primary"></i> أرشيف سجلات الدوام';
+            subTitle.innerText = 'إدارة سجلات وأرصدة الحضور المعتمدة للأشهر السابقة.';
+            btnToggle.innerHTML = '<i class="fa-solid fa-plus"></i> <span id="toggle-entry-text">إدخال سجل شهر جديد</span>';
+            btnToggle.classList.replace('bg-slate-200', 'bg-primary');
+            btnToggle.classList.replace('text-slate-800', 'text-white');
+            btnToggle.classList.replace('hover:bg-slate-300', 'hover:bg-blue-600');
+
+            loadArchive(); // Refresh
+        }
+    });
+
+    /* ================= ARCHIVE LOGIC ================= */
+    async function loadArchive() {
+        const tbody = document.getElementById('archive-tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12"><div class="animate-spin inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full"></div></td></tr>';
+
+        const cFilter = document.getElementById('archive-filter-company').value;
+        const groupQuery = {};
+
+        try {
+            // Because we don't have a specific `batch_history` table, we simulate the archive
+            // by fetching from `monthly_attendance` and grouping by (month_year, company_id) in memory.
+            // *NOTE*: This assumes you have a `monthly_attendance` table per requirements. If you only had `attendance`, 
+            // you'd group that. But the instructions mention `monthly_attendance`. If we don't have it, we might error.
+            // Let's attempt to select from it.
+
+            // To ensure compatibility (if monthly_attendance doesn't exist yet, we catch it smoothly)
+            let rawData = [];
+            let rError = null;
+            try {
+                let query = window.db.from('monthly_attendance').select('id, emp_id, company_id, month_year, created_at');
+                if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
+                    query = query.eq('company_id', window.currentUserCompanyId);
+                }
+                const res = await query;
+                rawData = res.data;
+                rError = res.error;
+            } catch (sqle) { rError = sqle; }
+
+            if (rError || !rawData) {
+                // Table might not exist yet, meaning no archive.
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500"><p><i class="fa-solid fa-database text-4xl mb-3 text-slate-300"></i></p>جدول الأرشيف فارغ (أو قاعدة بيانات monthly_attendance تحتاج لتأسيس). بمجرد حفظ سجل، سيظهر هنا.</td></tr>';
+                return;
+            }
+
+            if (rawData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500"><p><i class="fa-solid fa-folder-open text-4xl mb-3 text-slate-300"></i></p>الأرشيف فارغ حالياً. لم يتم اعتماد أي سجلات بعد.</td></tr>';
+                return;
+            }
+
+            // Grouping logic
+            rawData.forEach(row => {
+                // Apply filter
+                if (cFilter !== 'all' && row.company_id != cFilter) return;
+
+                const key = `${row.month_year}_${row.company_id}`;
+                if (!groupQuery[key]) {
+                    groupQuery[key] = {
+                        month_year: row.month_year,
+                        company_id: row.company_id,
+                        company_name: companiesLookup[row.company_id] || 'سجل عام',
+                        emp_count: 0,
+                        last_saved: new Date(row.created_at).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })
+                    };
+                }
+                groupQuery[key].emp_count++;
+            });
+
+            const keys = Object.keys(groupQuery).sort().reverse(); // Show newest first
+
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-500">لا يوجد بيانات تطابق التصفية الحالية.</td></tr>';
+                return;
+            }
+
+            const canEditArchived = !window.hasPerm || window.hasPerm('attendance', 'edit');
+            let html = '';
+            keys.forEach(k => {
+                const group = groupQuery[k];
+                // For UI nice rendering, Month-Year is stored as "YYYY-MM" Usually
+                const [y, m] = group.month_year.split('-');
+                const niceMonth = `${m} / ${y}`;
+
+                html += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-slate-800 text-center font-mono text-base">${niceMonth}</td>
+                        <td class="px-6 py-4 font-medium text-amber-700">${group.company_name}</td>
+                        <td class="px-6 py-4 text-center font-mono font-bold bg-slate-50/50">${group.emp_count} <span class="font-sans font-normal text-xs text-slate-400">سجل إدخال</span></td>
+                        <td class="px-6 py-4 text-center text-xs text-slate-500">${group.last_saved}</td>
+                        <td class="px-6 py-4 text-center">
+                            ${canEditArchived ? `
+                            <button onclick="editArchivedRecord('${group.month_year}', '${group.company_id}')" class="text-primary hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-primary/20 transition-colors text-xs font-bold w-full mx-auto max-w-[120px] flex justify-center items-center gap-2">
+                                <i class="fa-solid fa-eye"></i> استعراض/تعديل
+                            </button>
+                            ` : `<span class="inline-flex text-xs text-slate-400 font-bold px-3 py-1.5">لا تملك صلاحية تعديل</span>`}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+
+        } catch (e) {
+            console.error("Archive Load Error:", e);
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500 font-bold">حدث خطأ: ${e.message}</td></tr>`;
+        }
+    }
+
+    // Connects table filters
+    document.getElementById('archive-filter-company').addEventListener('change', loadArchive);
+
+    /* ================= EDIT MODE / SMART GRID LOGIC ================= */
+    window.editArchivedRecord = function (month_year, comp_id) {
+        if (window.hasPerm && !window.hasPerm('attendance', 'edit')) return alert('Security Block: غير مصرح لك بتعديل السجلات.');
+        // Prepare Filters to Match Historic Record
+        monthInput.value = month_year;
+        compFilterInput.value = comp_id || 'all';
+
+        // Ensure "all" works if they saved globally
+        if (comp_id === 'undefined' || comp_id === 'null' || !comp_id) compFilterInput.value = 'all';
+
+        // Manually click the toggle to open entry view
+        if (!isEntryView) document.getElementById('btn-toggle-entry').click();
+
+        // Immediately fetch the grid
+        document.getElementById('load-smart-grid').click();
+    };
+
+    // Main fetch button inside Smart Grid View
+    document.getElementById('load-smart-grid').addEventListener('click', async () => {
+        if (window.hasPerm && !window.hasPerm('attendance', 'add') && !window.hasPerm('attendance', 'edit')) {
+            return alert('Security Block: غير مصرح لك بإنشاء أو تعديل سجلات الحضور.');
+        }
+        const monthVal = monthInput.value;
+        const compId = compFilterInput.value;
+        const tbody = document.getElementById('smart-grid-tbody');
+        const overlay = document.getElementById('grid-loading-overlay');
+
+        if (!monthVal) return alert('يرجى اختيار الشهر.');
+        if (compId === 'all') return alert('يرجى اختيار منشأة محددة (فرع محدد) لإدخال أو تعديل السجل، لا يمكن حفظ سجل مدمج.');
+
+        const [yearStr, monthStr] = monthVal.split('-');
+        currentDaysInMonth = getDaysInMonth(parseInt(yearStr), parseInt(monthStr));
+
+        // Print Labels updates
+        document.getElementById('print-month-display').innerText = monthVal;
+        document.getElementById('print-company-display').innerText = companiesLookup[compId] || 'المنشأة المحددة';
+
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+
+        try {
+            // STEP 1: Fetch Existing `monthly_attendance` for this Period & Company
+            // If they exist, we are in EDIT mode. If empty, we are in CREATE mode.
+            let existingRecordsDict = {};
+            try {
+                // Strictly filter by BOTH month_year and company_id
+                let qArchive = window.db.from('monthly_attendance').select('*')
+                    .eq('month_year', monthVal)
+                    .eq('company_id', compId);
+
+                const { data: archData } = await qArchive;
+
+                if (archData && archData.length > 0) {
+                    // We have history! Map it.
+                    archData.forEach(r => {
+                        existingRecordsDict[r.emp_id] = r;
+                    });
+                }
+            } catch (ignore) { /* Table might not exist yet, proceed in Create Mode smoothly */ }
+
+            // STEP 2: Fetch Active Employees
+            // We fetch the current master list, to ensure no one is missed.
+            let query = window.db
+                .from('employees')
+                .select('id, first_name, last_name, company_id, companies(name)')
+                .eq('status', 'active')
+                .is('deleted_at', null);
+            if (compId !== 'all') {
+                query = query.eq('company_id', compId);
+            }
+
+            const { data: emps, error } = await query;
+            if (error) throw error;
+
+            if (!emps || emps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-500">لا يوجد موظفين نشطين.</td></tr>';
+                currentGridData = [];
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                return;
+            }
+
+            // STEP 3: Merge Emps with Historic Data (if available) -> Hydrate `currentGridData`
+            currentGridData = emps.map(e => {
+                const hist = existingRecordsDict[e.id]; // Check history
+                return {
+                    emp_id: e.id,
+                    name: `${e.first_name} ${e.last_name}`,
+                    company_id: e.company_id,
+                    company: e.companies?.name || '-',
+                    days_in_month: currentDaysInMonth,
+
+                    // If History exists, use it. Otherwise Defaults.
+                    days_present: hist ? hist.days_present : currentDaysInMonth,
+                    days_absent: hist ? hist.days_absent : 0,
+                    hours_overtime: hist ? hist.hours_overtime : 0,
+                    hours_late: hist ? hist.hours_late : 0
+                };
+            });
+
+            // Re-render
+            renderGrid();
+
+            // Adjust Save Button UI contextually
+            const saveBtnText = document.getElementById('save-btn-text');
+            if (Object.keys(existingRecordsDict).length > 0) {
+                saveBtnText.innerText = 'حفظ وتحديث الأرشيف';
+                document.getElementById('save-batch-attendance').classList.replace('bg-emerald-500', 'bg-amber-500');
+                document.getElementById('save-batch-attendance').classList.replace('hover:bg-emerald-600', 'hover:bg-amber-600');
+                document.getElementById('save-batch-attendance').classList.replace('border-emerald-600', 'border-amber-600');
+            } else {
+                saveBtnText.innerText = 'اعتماد سجل جديد';
+                document.getElementById('save-batch-attendance').classList.replace('bg-amber-500', 'bg-emerald-500');
+                document.getElementById('save-batch-attendance').classList.replace('hover:bg-amber-600', 'hover:bg-emerald-600');
+                document.getElementById('save-batch-attendance').classList.replace('border-amber-600', 'border-emerald-600');
+            }
+
+        } catch (err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-red-500 font-bold">حدث خطأ: ${err.message}</td></tr>`;
+        } finally {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+        }
+    });
+
+    function renderGrid() {
+        const tbody = document.getElementById('smart-grid-tbody');
+        let html = '';
+
+        currentGridData.forEach((row, index) => {
+            html += `
+                <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0" data-index="${index}">
+                    <td class="px-5 py-3 border-l border-slate-100/50 bg-white/50">
+                        <div class="font-bold text-slate-800">${row.name}</div>
+                        <div class="text-xs text-amber-600 font-medium">${row.company}</div>
+                    </td>
+                    <td class="px-3 py-3 text-center text-slate-500 font-mono align-middle select-none bg-slate-50/50">
+                        ${row.days_in_month}
+                    </td>
+                    <td class="px-3 py-3 text-center align-middle">
+                        <input type="number" min="0" max="${row.days_in_month}" data-field="days_present" value="${row.days_present}"
+                            class="grid-input w-20 text-center font-bold border border-slate-200 rounded-lg p-1.5 focus:border-primary focus:ring-1 focus:ring-primary print:border-none print:shadow-none print:bg-transparent print:p-0">
+                    </td>
+                    <td class="px-3 py-3 text-center align-middle bg-red-50/30">
+                        <input type="number" min="0" max="${row.days_in_month}" data-field="days_absent" value="${row.days_absent}"
+                            class="grid-input w-20 text-center border border-red-200 rounded-lg p-1.5 focus:border-red-400 focus:ring-1 focus:ring-red-400 text-red-600 font-bold bg-white print:border-none print:shadow-none print:bg-transparent print:p-0">
+                    </td>
+                    <td class="px-3 py-3 text-center align-middle bg-emerald-50/30">
+                        <input type="number" min="0" data-field="hours_overtime" value="${row.hours_overtime}"
+                            class="grid-input w-20 text-center border border-emerald-200 rounded-lg p-1.5 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-emerald-600 bg-white font-bold print:border-none print:shadow-none print:bg-transparent print:p-0">
+                    </td>
+                    <td class="px-3 py-3 text-center align-middle bg-amber-50/30 border-r border-slate-100/50">
+                        <input type="number" min="0" data-field="hours_late" value="${row.hours_late}"
+                            class="grid-input w-20 text-center border border-amber-200 rounded-lg p-1.5 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-amber-600 bg-white font-bold print:border-none print:shadow-none print:bg-transparent print:p-0">
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+
+        // Attach Event Listeners for Smart Auto-Calc
+        document.querySelectorAll('.grid-input').forEach(input => {
+            input.addEventListener('input', function () {
+                const tr = this.closest('tr');
+                const index = tr.getAttribute('data-index');
+                const field = this.getAttribute('data-field');
+                let val = parseFloat(this.value) || 0;
+
+                const rowObj = currentGridData[index];
+
+                // Auto Calc Logic (Present <-> Absent)
+                if (field === 'days_absent') {
+                    if (val > rowObj.days_in_month) val = rowObj.days_in_month;
+                    rowObj.days_absent = val;
+                    rowObj.days_present = rowObj.days_in_month - val;
+                    tr.querySelector('[data-field="days_present"]').value = rowObj.days_present;
+                } else if (field === 'days_present') {
+                    if (val > rowObj.days_in_month) val = rowObj.days_in_month;
+                    rowObj.days_present = val;
+                    rowObj.days_absent = rowObj.days_in_month - val;
+                    tr.querySelector('[data-field="days_absent"]').value = rowObj.days_absent;
+                } else {
+                    rowObj[field] = val; // Overtime or Late
+                }
+
+                this.value = val; // Reflect bounds
+            });
+        });
+    }
+
+    /* ================= SAVE LOGIC ================= */
+    document.getElementById('save-batch-attendance').addEventListener('click', async () => {
+        if (window.hasPerm && !window.hasPerm('attendance', 'add') && !window.hasPerm('attendance', 'edit')) {
+            return alert('Security Block: غير مصرح لك بحفظ سجلات الحضور.');
+        }
+        const compId = compFilterInput.value;
+        if (compId === 'all') return alert('الرجاء تحديد المنشأة المستهدفة. لا يمكن اعتماد سجل بدون تحديد المؤسسة/الفرع.');
+
+        if (currentGridData.length === 0) return alert('الجدول فارغ.');
+        if (!confirm('سيتم حفظ هذا السجل في قاعدة البيانات (الأرشيف). هل أنت متأكد؟')) return;
+
+        const btn = document.getElementById('save-batch-attendance');
+        const saveIcon = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحفظ...';
+        btn.disabled = true;
+
+        try {
+            const monthVal = monthInput.value;
+
+            // Create payload mapping for DB
+            const upsertPayload = currentGridData.map(row => ({
+                emp_id: row.emp_id,
+                company_id: compId, // Captured directly from the dropdown to ensure strict binding
+                month_year: monthVal,
+                days_present: row.days_present,
+                days_absent: row.days_absent,
+                hours_overtime: row.hours_overtime,
+                hours_late: row.hours_late
+            }));
+
+            // Delete old exactly matching records first to simulate an UPSERT safely (Since free tier APIs sometimes struggle with complex constraint upserts)
+            const empIds = currentGridData.map(r => r.emp_id);
+            if (empIds.length > 0) {
+                await window.db.from('monthly_attendance').delete()
+                    .eq('month_year', monthVal)
+                    .in('emp_id', empIds);
+            }
+
+            // Insert new clean records
+            const { error: insErr } = await window.db.from('monthly_attendance').insert(upsertPayload);
+            if (insErr) throw insErr;
+
+            alert('✅ تم اعتماد سجل الوقت وحفظه بنجاح في الأرشيف.');
+
+            // Switch back to Archive View nicely
+            btnToggle.click();
+
+        } catch (e) {
+            console.error("Save Error:", e);
+            alert(`حدث خطأ أثناء الاتصال بقاعدة البيانات. (تأكد من إنشاء جدول monthly_attendance). الرسالة: ${e.message}`);
+        } finally {
+            btn.innerHTML = saveIcon;
+            btn.disabled = false;
+        }
+    });
+
+    /* ================= EXPORT LOGIC ================= */
+    window.exportToCSV = function () {
+        if (window.hasPerm && !window.hasPerm('attendance', 'view')) return alert('Security Block: غير مصرح لك بالتصدير.');
+        if (currentGridData.length === 0) return alert('لا يوجد بيانات لتصديرها.');
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "الموظف,المنشأة,إجمالي أيام الشهر,أيام الحضور,أيام الغياب,ساعات الإضافي,ساعات التأخير\n";
+
+        currentGridData.forEach(r => {
+            const row = [
+                `"${r.name}"`,
+                `"${r.company}"`,
+                r.days_in_month,
+                r.days_present,
+                r.days_absent,
+                r.hours_overtime,
+                r.hours_late
+            ];
+            csvContent += row.join(",") + "\n";
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `سجل_دوام_${monthInput.value}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    window.exportToPDF = function () {
+        if (window.hasPerm && !window.hasPerm('attendance', 'view')) return alert('Security Block: غير مصرح لك بالتصدير.');
+        if (currentGridData.length === 0) return alert('لا يوجد بيانات لتصديرها.');
+
+        const element = document.getElementById('attendance-export-area');
+
+        // Hide scrollbar & set width to prevent cropping
+        element.style.width = '1000px';
+        element.style.maxWidth = '1000px';
+
+        const opt = {
+            margin: [0.4, 0.4, 0.4, 0.4],
+            filename: `سجل_دوام_${monthInput.value}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, windowWidth: 1000 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        // Convert inputs to spans
+        const inputs = element.querySelectorAll('input');
+        const replacements = [];
+
+        inputs.forEach(inp => {
+            const span = document.createElement('span');
+            span.innerText = inp.value;
+            span.className = "font-mono font-bold text-center inline-block w-full";
+            if (inp.classList.contains('text-red-600')) span.classList.add('text-red-700');
+            if (inp.classList.contains('text-emerald-600')) span.classList.add('text-emerald-700');
+            if (inp.classList.contains('text-amber-600')) span.classList.add('text-amber-700');
+
+            inp.parentNode.insertBefore(span, inp);
+            inp.style.display = 'none';
+            replacements.push({ inp, span });
+        });
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            // Restore inputs & bounds
+            replacements.forEach(r => {
+                r.inp.style.display = 'inline-block';
+                r.span.parentNode.removeChild(r.span);
+            });
+            element.style.width = 'auto';
+            element.style.maxWidth = 'none';
+        });
+    };
+
+    setTimeout(() => {
+        const canWriteAttendance = !window.hasPerm || window.hasPerm('attendance', 'add') || window.hasPerm('attendance', 'edit');
+        if (!canWriteAttendance) {
+            const loadBtn = document.getElementById('load-smart-grid');
+            const saveBtn = document.getElementById('save-batch-attendance');
+            if (loadBtn) loadBtn.style.display = 'none';
+            if (saveBtn) saveBtn.style.display = 'none';
+        }
+    }, 100);
+
+    // Run Once
+    initPage();
+</script>
