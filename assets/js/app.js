@@ -57,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Simple Router (Master Layout loading partials)
+    let permissionsReady = false;
+    window.__permissionsReady = () => permissionsReady;
+    
     const loadPage = async (pageName) => {
         // --- Chameleon UI Routing Restriction ---
         if (window.currentUserRole === 'employee' && pageName !== 'ess-dashboard') {
@@ -83,12 +86,16 @@ document.addEventListener('DOMContentLoaded', () => {
             'compliance': 'compliance',
             'assets': 'assets',
             'vehicles': 'vehicles',
-            'users': 'settings' // Map users page access to settings permission
+            'users': 'users'
         };
         
         if (pageModuleMap[pageName] && !window.hasPerm(pageModuleMap[pageName], 'view')) {
-            alert('صلاحياتك الحالية لا تسمح لك بعرض هذه الصفحة.');
-            window.location.hash = '#dashboard';
+            if (window.currentUserRole === 'employee') {
+                window.location.hash = '#ess-dashboard';
+            } else {
+                alert('صلاحياتك الحالية لا تسمح لك بعرض هذه الصفحة.');
+                window.location.hash = '#dashboard';
+            }
             return;
         }
 
@@ -212,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const essSession = JSON.parse(essSessionStr);
                 window.currentUserRole = 'employee';
                 window.currentEmpId = essSession.employee_profile_id;
+                permissionsReady = true;
 
                 // Chameleon UI: Swap Sidebars
                 const hrNav = document.getElementById('nav-hr-links');
@@ -263,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.currentUserRole = userData.role;
                     window.currentUserPerms = userData.custom_permissions;
                     window.currentUserCompanyId = userData.company_id;
+                    permissionsReady = true;
 
                     // DYNAMICALLY HIDE RESTRICTED SIDEBAR LINKS BASED ON MATRIX
                     const sidebarMap = {
@@ -276,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'compliance': 'compliance',
                         'assets': 'assets',
                         'vehicles': 'vehicles',
-                        'users': 'settings'
+                        'users': 'users'
                     };
 
                     document.querySelectorAll('.nav-link').forEach(link => {

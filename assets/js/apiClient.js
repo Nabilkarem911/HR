@@ -321,8 +321,8 @@ function from(rawTable) {
 
             // Head mode: return count only (no data rows)
             if (state.headMode && state.countMode) {
-                const rows = (data && data.data) ? data.data : (Array.isArray(data) ? data : []);
-                return { data: null, error: null, count: rows.length };
+                const total = (data && data.total != null) ? data.total : ((data && data.data) ? data.data.length : 0);
+                return { data: null, error: null, count: total };
             }
 
             if (state.singleMode) {

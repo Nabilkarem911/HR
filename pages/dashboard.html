@@ -247,7 +247,9 @@
             const { data: { user } } = await window.db.auth.getUser();
             if (!user) return;
 
-            const { data: profile } = await window.db.from('system_users').select('full_name, role, company_id').eq('id', user.id).single();
+            // Use cached profile from session instead of extra query
+            const { data: session } = await window.db.auth.getSession();
+            const profile = session?.session?.user_meta;
 
             if (profile) {
                 nameEl.innerText = profile.full_name || 'مدير النظام';
@@ -255,7 +257,7 @@
 
                 if (profile.role === 'super_admin') {
                     roleEl.innerHTML = '<i class="fa-solid fa-globe text-emerald-300"></i> صلاحية مطلقة (مدير نظام عام)';
-                    const { data: comps } = await window.db.from('companies').select('id, name');
+                    const { data: comps } = await window.db.from('companies').select('*');
                     if (comps) {
                         const filterSelect = document.getElementById('master-company-filter');
                         comps.forEach(c => filterSelect.innerHTML += `<option class="text-slate-800" value="${c.id}">${c.name}</option>`);
@@ -301,12 +303,9 @@
     async function fetchKPIEmployees() {
         const el = document.getElementById('kpi-emps');
         try {
-            let q = window.db.from('employees').select('id', { count: 'exact', head: true }).eq('status', 'active');
-            q = q.is('deleted_at', null);
-            q = applyRBAC(q, 'company_id');
-            const { count, error } = await q;
+            const { data, error } = await apiRequest('GET', '/dashboard/kpis');
             if (error) throw error;
-            el.innerText = count || '0';
+            el.innerText = data.active_employees || 0;
         } catch (e) {
             el.innerText = 'N/A';
         }
@@ -316,13 +315,10 @@
     async function fetchKPIPayroll() {
         const el = document.getElementById('kpi-payroll');
         try {
-            let q = window.db.from('employees').select('basic_salary').eq('status', 'active');
-            q = q.is('deleted_at', null);
-            q = applyRBAC(q, 'company_id');
-            const { data, error } = await q;
+            const { data, error } = await apiRequest('GET', '/employees?limit=100&status=active');
             if (error) throw error;
-
-            const total = data.reduce((sum, e) => sum + (parseFloat(e.basic_salary) || 0), 0);
+            const rows = data.data || data || [];
+            const total = rows.reduce((sum, e) => sum + (parseFloat(e.basic_salary) || 0), 0);
             el.innerHTML = `${total.toLocaleString('en-US', { maximumFractionDigits: 0 })} <span class="text-sm text-slate-400 font-normal">ر.س</span>`;
         } catch (e) {
             el.innerText = 'N/A';
@@ -352,9 +348,9 @@
             }
 
             // Super Admin: Count total
-            let { count, error } = await window.db.from('companies').select('id', { count: 'exact', head: true });
+            const { data, error } = await apiRequest('GET', '/dashboard/kpis');
             if (error) throw error;
-            el.innerText = count || '0';
+            el.innerText = data.total_companies || 0;
         } catch (e) {
             el.innerText = 'N/A';
         }
@@ -366,21 +362,20 @@
         const kpiEl = document.getElementById('kpi-compliance');
 
         try {
-            // Broad robust fetch
-            const { data, error } = await window.db.from('employee_documents')
-                .select('id, doc_type, expiry_date, employees (id, first_name, last_name, company_id)');
+            // Use dashboard compliance-radar endpoint
+            const { data, error } = await apiRequest('GET', '/dashboard/compliance-radar');
 
             if (error) throw error;
 
-            let records = data || [];
+            let records = data.documents || [];
 
-            // Execute local JS filtering for RBAC to guarantee no PostgREST breaks
+            // Execute local JS filtering for RBAC
             if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
-                records = records.filter(d => d.employees && d.employees.company_id == window.currentUserCompanyId);
+                records = records.filter(d => d.company_id == window.currentUserCompanyId);
             } else {
                 const filterEl = document.getElementById('master-company-filter');
                 if (filterEl && filterEl.value !== 'all') {
-                    records = records.filter(d => d.employees && d.employees.company_id == filterEl.value);
+                    records = records.filter(d => d.company_id == filterEl.value);
                 }
             }
 
@@ -434,7 +429,7 @@
 
             let html = '';
             topUrgent.forEach(doc => {
-                const empName = doc.employees ? (`${doc.employees.first_name || ''} ${doc.employees.last_name || ''}`).trim() || 'غير معروف' : 'غير معروف';
+                const empName = (`${doc.first_name || ''} ${doc.last_name || ''}`).trim() || 'غير معروف';
 
                 let badgeClass = 'bg-rose-50 text-rose-600 border-rose-200';
                 let iconClass = 'fa-xmark text-rose-500';
@@ -527,18 +522,9 @@
         if (!listEl || !statusEl || !window.db) return;
 
         try {
-            // Starter module: expects table `audit_logs` with common fields.
-            let query = window.db
-                .from('audit_logs')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(8);
+            // Use dashboard audit-logs endpoint
+            const { data, error } = await apiRequest('GET', '/dashboard/audit-logs');
 
-            if (window.currentUserRole !== 'super_admin' && window.currentUserCompanyId) {
-                query = query.eq('company_id', window.currentUserCompanyId);
-            }
-
-            const { data, error } = await query;
             if (error) throw error;
 
             const rows = data || [];

@@ -100,16 +100,14 @@
             if (loginResult && loginResult.user && loginResult.user.role === 'employee') {
                 // ESS Employee login — store custom session (no JWT needed)
                 localStorage.setItem('ess_session', JSON.stringify(loginResult.user));
-                window.location.hash = '#ess-dashboard';
-                setTimeout(() => window.location.reload(), 200);
+                window.location.reload();
                 return;
             }
 
             if (loginResult && loginResult.token) {
                 // Admin/HR login — JWT stored by apiClient
                 localStorage.setItem('hr_auth_token', loginResult.token);
-                window.location.hash = '#dashboard';
-                setTimeout(() => window.location.reload(), 200);
+                window.location.reload();
                 return;
             }
 
