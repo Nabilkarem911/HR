@@ -55,8 +55,11 @@ async function apiRequest(method, path, body) {
         if (!res.ok) {
             if (res.status === 401) {
                 clearToken();
-                if (window.location.pathname !== '/login.html' && window.location.pathname !== '/') {
-                    window.location.href = 'login.html';
+                if (window.location.hash !== '#login') {
+                    window.location.hash = '#login';
+                    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                        window.location.href = '/';
+                    }
                 }
             }
             const errMsg = json?.error || text || `HTTP ${res.status}`;

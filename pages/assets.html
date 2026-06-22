@@ -382,7 +382,7 @@
     }
 
     // 4. Modal Open/Close (Appended to Body safely)
-    function openAssetModal() {
+    window.openAssetModal = function() {
         document.body.appendChild(document.getElementById('asset-modal'));
 
         document.getElementById('asset-form').reset();
@@ -402,7 +402,7 @@
         content.classList.remove('opacity-0', 'scale-95');
     }
 
-    function closeAssetModal() {
+    window.closeAssetModal = function() {
         const overlay = document.getElementById('asset-modal-overlay');
         const content = document.getElementById('asset-modal-content');
 
@@ -457,7 +457,7 @@
     });
 
     // 6. Action: Quick Return Asset
-    async function quickReturn(id) {
+    window.quickReturn = async function(id) {
         if (window.hasPerm && !window.hasPerm('assets', 'edit')) return alert('Security Block: غير مصرح لك بتعديل حالة العهدة.');
         if (!confirm('هل تم استرجاع هذه العهدة فعلياً من الموظف وإدخالها للمستودع؟')) return;
 
@@ -490,7 +490,7 @@
     }
 
     // 7. Action: Delete
-    async function deleteAsset(id) {
+    window.deleteAsset = async function(id) {
         if (window.hasPerm && !window.hasPerm('assets', 'delete')) return alert('Security Block: غير مصرح لك بالحذف.');
         if (!confirm('تأكيد: هل تريد حذف السجل بالكامل من النظام؟ لا يمكن التراجع عن هذا الإجراء.')) return;
         try {
