@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+npm-debug.log
+.env
+.env.local
+.git
+.gitignore
+**/.git
+docker-compose.yml
+.dockerignore
+README.md
+server/README.md
+*.md

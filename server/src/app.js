@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 const { authMiddleware } = require('./middleware/auth');
@@ -68,6 +69,17 @@ app.use('/api/users', usersRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
+
+// ── Serve Frontend Static Files ──
+const frontendPath = path.join(__dirname, '..', '..', 'public');
+app.use(express.static(frontendPath));
+app.use('/assets', express.static(path.join(frontendPath, 'assets')));
+app.use('/pages', express.static(path.join(frontendPath, 'pages')));
+
+// SPA fallback: serve index.html for root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
 // ── 404 Handler ──
 app.use((req, res) => {

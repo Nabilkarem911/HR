@@ -2,10 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+# Copy server package files and install dependencies
+COPY server/package*.json ./
 RUN npm install --production
 
-COPY . .
+# Copy server source code
+COPY server/ ./
+
+# Copy frontend files to public directory
+COPY index.html ./public/
+COPY pages/ ./public/pages/
+COPY assets/ ./public/assets/
 
 EXPOSE 3000
 

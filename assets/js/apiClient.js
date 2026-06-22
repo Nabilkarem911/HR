@@ -4,7 +4,7 @@
    custom Express backend via fetch().
    ========================================================================== */
 
-const API_BASE_URL = window.API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = window.API_BASE_URL || '/api';
 
 // ── Table Name Aliases (maps frontend table names to backend route names) ──
 const TABLE_ALIASES = {
