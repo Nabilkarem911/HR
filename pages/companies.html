@@ -173,7 +173,7 @@
     <script>
         var compModal = document.getElementById('company-modal');
 
-        function openCompanyModal(id = '', name = '') {
+        window.openCompanyModal = function (id = '', name = '') {
             // Move modal to body to overcome parent overflow constraints
             if (compModal.parentNode !== document.body) {
                 document.body.appendChild(compModal);
@@ -193,7 +193,7 @@
             document.getElementById('modal-comp-title').innerText = id ? 'تعديل المنشأة' : 'إضافة منشأة';
         }
 
-        function closeCompanyModal() {
+        window.closeCompanyModal = function () {
             compModal.classList.add('hidden');
             compModal.classList.remove('flex');
 
