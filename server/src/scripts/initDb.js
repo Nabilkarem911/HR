@@ -3,15 +3,21 @@ const path = require('path');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../config/db');
+const runMigrations = require('./runMigrations');
 
 async function initDb() {
   console.log('[initDb] Starting database initialization...');
 
-  // Read and execute schema.sql
+  // Read and execute schema.sql (creates tables if they don't exist)
   const schemaPath = path.join(__dirname, '..', '..', 'schema.sql');
   const schema = fs.readFileSync(schemaPath, 'utf8');
   await query(schema);
   console.log('[initDb] Schema tables created.');
+
+  // Run migrations (adds new columns/indexes to existing tables)
+  console.log('[initDb] Running migrations...');
+  await runMigrations();
+  console.log('[initDb] Migrations complete.');
 
   // Seed super admin
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@example.com';

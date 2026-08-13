@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS companies (
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_companies_deleted_at ON companies(deleted_at);
+-- indexes on deleted_at are in migrations for existing databases
 
 -- ─────────────────────────────────────────────
 -- 2. employees
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_system_users_role ON system_users(role);
 CREATE INDEX IF NOT EXISTS idx_system_users_company_id ON system_users(company_id);
 CREATE INDEX IF NOT EXISTS idx_system_users_employee_profile_id ON system_users(employee_profile_id);
 CREATE INDEX IF NOT EXISTS idx_system_users_phone ON system_users(phone);
-CREATE INDEX IF NOT EXISTS idx_system_users_deleted_at ON system_users(deleted_at);
+-- index on deleted_at is in migrations for existing databases
 
 -- ─────────────────────────────────────────────
 -- 4. employee_documents (compliance)
