@@ -98,7 +98,10 @@
             if (loginError) throw loginError;
 
             if (loginResult && loginResult.user && loginResult.user.role === 'employee') {
-                // ESS Employee login — store custom session (no JWT needed)
+                // ESS Employee login — store both JWT token and custom session
+                if (loginResult.token) {
+                    localStorage.setItem('hr_auth_token', loginResult.token);
+                }
                 localStorage.setItem('ess_session', JSON.stringify(loginResult.user));
                 window.location.reload();
                 return;

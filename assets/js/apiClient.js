@@ -55,11 +55,14 @@ async function apiRequest(method, path, body) {
 
         if (!res.ok && res.status !== 304) {
             if (res.status === 401) {
-                clearToken();
-                if (window.location.hash !== '#login') {
-                    window.location.hash = '#login';
-                    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-                        window.location.href = '/';
+                // Only clear token and redirect if NOT an ESS session
+                if (!localStorage.getItem('ess_session')) {
+                    clearToken();
+                    if (window.location.hash !== '#login') {
+                        window.location.hash = '#login';
+                        if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                            window.location.href = '/';
+                        }
                     }
                 }
             }
