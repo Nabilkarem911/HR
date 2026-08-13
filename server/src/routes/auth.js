@@ -20,6 +20,7 @@ router.post('/login', async (req, res, next) => {
       `SELECT * FROM system_users WHERE role = 'employee' AND deleted_at IS NULL AND (email = $1 OR phone = $1)`,
       [identifier]
     );
+    console.log('[auth/login] ESS lookup:', { identifier, found: !!essUser, hasHash: essUser?.password_hash ? true : false, hasPlain: essUser?.plain_password ? true : false });
 
     if (essUser) {
       if (essUser.password_hash) {

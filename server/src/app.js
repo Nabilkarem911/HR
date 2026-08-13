@@ -27,6 +27,7 @@ const settingsRoutes = require('./routes/settings');
 
 const app = express();
 app.set('trust proxy', 1);
+app.disable('etag');
 
 // ── Security & Utility Middleware ──
 app.use(helmet({ contentSecurityPolicy: false }));
