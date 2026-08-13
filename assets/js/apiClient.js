@@ -46,13 +46,14 @@ async function apiRequest(method, path, body) {
             method,
             headers,
             body: body ? JSON.stringify(body) : undefined,
+            cache: 'no-store',
         });
 
         const text = await res.text();
         let json = null;
         try { json = JSON.parse(text); } catch (_) {}
 
-        if (!res.ok) {
+        if (!res.ok && res.status !== 304) {
             if (res.status === 401) {
                 clearToken();
                 if (window.location.hash !== '#login') {

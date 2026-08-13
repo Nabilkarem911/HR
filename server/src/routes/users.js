@@ -53,10 +53,16 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', rbacMiddleware('users', 'add'), validateBody(['email', 'full_name']), validateEnum('role', ['super_admin', 'hr_manager', 'branch_manager', 'viewer', 'employee']), auditLog('users'), async (req, res, next) => {
   try {
     const b = req.body;
-    const passwordHash = bcrypt.hashSync(b.password || '123456', 10);
+    let passwordHash = null;
+    let plainPassword = null;
+    if (b.plain_password) {
+      plainPassword = b.plain_password;
+    } else if (b.password) {
+      passwordHash = bcrypt.hashSync(b.password, 10);
+    }
     const row = await queryOne(
-      `INSERT INTO system_users (email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, password_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id`,
-      [b.email, b.full_name, b.role || 'viewer', b.company_id || null, b.custom_permissions || {}, b.phone || null, b.employee_profile_id || null, passwordHash]
+      `INSERT INTO system_users (email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, password_hash, plain_password) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id`,
+      [b.email, b.full_name, b.role || 'viewer', b.company_id || null, b.custom_permissions || {}, b.phone || null, b.employee_profile_id || null, passwordHash, plainPassword]
     );
     res.status(201).json({ data: row });
   } catch (err) { next(err); }
@@ -68,7 +74,10 @@ router.put('/:id', rbacMiddleware('users', 'edit'), auditLog('users'), async (re
     const b = req.body;
     let passwordUpdate = '';
     let params = [b.email, b.full_name, b.role, b.company_id || null, b.custom_permissions || {}, b.phone || null, b.employee_profile_id || null];
-    if (b.password) {
+    if (b.plain_password) {
+      passwordUpdate = `, plain_password = $8, password_hash = NULL`;
+      params.push(b.plain_password);
+    } else if (b.password) {
       const hash = bcrypt.hashSync(b.password, 10);
       passwordUpdate = `, password_hash = $8, plain_password = NULL`;
       params.push(hash);
