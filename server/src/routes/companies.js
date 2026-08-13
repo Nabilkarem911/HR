@@ -9,10 +9,10 @@ const router = express.Router();
 // ── GET /api/companies ──
 router.get('/', async (req, res, next) => {
   try {
-    let sql = `SELECT * FROM companies ORDER BY created_at ASC`;
+    let sql = `SELECT * FROM companies WHERE deleted_at IS NULL ORDER BY created_at ASC`;
     let params = [];
     if (req.user.role !== 'super_admin' && req.user.company_id) {
-      sql = `SELECT * FROM companies WHERE id = $1 ORDER BY created_at ASC`;
+      sql = `SELECT * FROM companies WHERE id = $1 AND deleted_at IS NULL ORDER BY created_at ASC`;
       params = [req.user.company_id];
     }
     const rows = await queryAll(sql, params);
@@ -23,7 +23,7 @@ router.get('/', async (req, res, next) => {
 // ── GET /api/companies/:id ──
 router.get('/:id', async (req, res, next) => {
   try {
-    const row = await queryOne(`SELECT * FROM companies WHERE id = $1`, [req.params.id]);
+    const row = await queryOne(`SELECT * FROM companies WHERE id = $1 AND deleted_at IS NULL`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Company not found' });
     res.json({ data: row });
   } catch (err) { next(err); }
@@ -51,8 +51,8 @@ router.put('/:id', rbacMiddleware('companies', 'edit'), auditLog('companies'), a
 // ── DELETE /api/companies/:id ──
 router.delete('/:id', rbacMiddleware('companies', 'delete'), auditLog('companies'), async (req, res, next) => {
   try {
-    await query(`DELETE FROM companies WHERE id = $1`, [req.params.id]);
-    res.json({ message: 'Company deleted' });
+    await query(`UPDATE companies SET deleted_at = NOW() WHERE id = $1`, [req.params.id]);
+    res.json({ message: 'Company archived' });
   } catch (err) { next(err); }
 });
 

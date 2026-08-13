@@ -17,7 +17,7 @@ router.post('/login', async (req, res, next) => {
 
     // Try ESS (employee) login first — find by email or phone, then verify with bcrypt
     const essUser = await queryOne(
-      `SELECT * FROM system_users WHERE role = 'employee' AND (email = $1 OR phone = $1)`,
+      `SELECT * FROM system_users WHERE role = 'employee' AND deleted_at IS NULL AND (email = $1 OR phone = $1)`,
       [identifier]
     );
 
@@ -60,13 +60,13 @@ router.post('/login', async (req, res, next) => {
 
     // Admin / HR login — find by email or phone
     let adminUser = await queryOne(
-      `SELECT * FROM system_users WHERE email = $1 AND role != 'employee'`,
+      `SELECT * FROM system_users WHERE email = $1 AND role != 'employee' AND deleted_at IS NULL`,
       [identifier]
     );
 
     if (!adminUser) {
       adminUser = await queryOne(
-        `SELECT * FROM system_users WHERE phone = $1 AND role != 'employee'`,
+        `SELECT * FROM system_users WHERE phone = $1 AND role != 'employee' AND deleted_at IS NULL`,
         [identifier]
       );
     }
@@ -142,7 +142,7 @@ router.get('/profile', async (req, res, next) => {
     if (!decoded) return res.status(401).json({ error: 'Invalid token' });
 
     const user = await queryOne(
-      `SELECT id, email, full_name, role, company_id, employee_profile_id, custom_permissions FROM system_users WHERE id = $1`,
+      `SELECT id, email, full_name, role, company_id, employee_profile_id, custom_permissions FROM system_users WHERE id = $1 AND deleted_at IS NULL`,
       [decoded.id]
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -169,7 +169,7 @@ router.get('/lookup-phone', async (req, res, next) => {
     if (!phone) return res.status(400).json({ error: 'Phone parameter required' });
 
     const user = await queryOne(
-      `SELECT email FROM system_users WHERE phone = $1 AND role != 'employee' LIMIT 1`,
+      `SELECT email FROM system_users WHERE phone = $1 AND role != 'employee' AND deleted_at IS NULL LIMIT 1`,
       [phone]
     );
     if (!user) return res.json({ email: null });

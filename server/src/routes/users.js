@@ -12,7 +12,7 @@ const router = express.Router();
 router.get('/', rbacMiddleware('users', 'view'), async (req, res, next) => {
   try {
     const rows = await queryAll(
-      `SELECT id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, created_at FROM system_users WHERE role != 'employee' ORDER BY created_at DESC`
+      `SELECT id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, created_at FROM system_users WHERE role != 'employee' AND deleted_at IS NULL ORDER BY created_at DESC`
     );
     res.json({ data: rows });
   } catch (err) { next(err); }
@@ -78,8 +78,8 @@ router.put('/:id', rbacMiddleware('users', 'edit'), auditLog('users'), async (re
 // ── DELETE /api/users/:id ──
 router.delete('/:id', rbacMiddleware('users', 'delete'), auditLog('users'), async (req, res, next) => {
   try {
-    await query(`DELETE FROM system_users WHERE id = $1`, [req.params.id]);
-    res.json({ message: 'User deleted' });
+    await query(`UPDATE system_users SET deleted_at = NOW() WHERE id = $1`, [req.params.id]);
+    res.json({ message: 'User archived' });
   } catch (err) { next(err); }
 });
 

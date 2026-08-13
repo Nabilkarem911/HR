@@ -12,8 +12,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS companies (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name        TEXT NOT NULL,
-    created_at  TIMESTAMPTZ DEFAULT NOW()
+    deleted_at  TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_companies_deleted_at ON companies(deleted_at);
 
 -- ─────────────────────────────────────────────
 -- 2. employees
@@ -37,7 +40,8 @@ CREATE TABLE IF NOT EXISTS employees (
     nationality       TEXT,
     iqama_profession  TEXT,
     deleted_at        TIMESTAMPTZ,
-    created_at        TIMESTAMPTZ DEFAULT NOW()
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_employees_company_id ON employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_employees_deleted_at ON employees(deleted_at);
@@ -57,11 +61,15 @@ CREATE TABLE IF NOT EXISTS system_users (
     employee_profile_id  UUID REFERENCES employees(id) ON DELETE SET NULL,
     password_hash        TEXT,
     plain_password       TEXT,
-    created_at           TIMESTAMPTZ DEFAULT NOW()
+    deleted_at           TIMESTAMPTZ,
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_system_users_role ON system_users(role);
 CREATE INDEX IF NOT EXISTS idx_system_users_company_id ON system_users(company_id);
 CREATE INDEX IF NOT EXISTS idx_system_users_employee_profile_id ON system_users(employee_profile_id);
+CREATE INDEX IF NOT EXISTS idx_system_users_phone ON system_users(phone);
+CREATE INDEX IF NOT EXISTS idx_system_users_deleted_at ON system_users(deleted_at);
 
 -- ─────────────────────────────────────────────
 -- 4. employee_documents (compliance)
@@ -73,7 +81,8 @@ CREATE TABLE IF NOT EXISTS employee_documents (
     doc_number   TEXT,
     expiry_date  DATE,
     file_url     TEXT,
-    created_at   TIMESTAMPTZ DEFAULT NOW()
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_emp_docs_employee_id ON employee_documents(employee_id);
 CREATE INDEX IF NOT EXISTS idx_emp_docs_expiry_date ON employee_documents(expiry_date);
@@ -90,7 +99,8 @@ CREATE TABLE IF NOT EXISTS employee_assets (
     assigned_date DATE NOT NULL,
     status        TEXT DEFAULT 'assigned' CHECK (status IN ('assigned','returned','damaged','lost')),
     returned_date DATE,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_emp_assets_employee_id ON employee_assets(employee_id);
 CREATE INDEX IF NOT EXISTS idx_emp_assets_status ON employee_assets(status);
@@ -109,7 +119,8 @@ CREATE TABLE IF NOT EXISTS employee_requests (
     paid_amount  NUMERIC(12,2) DEFAULT 0,
     reason       TEXT,
     status       TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','processed')),
-    created_at   TIMESTAMPTZ DEFAULT NOW()
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_emp_req_employee_id ON employee_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_emp_req_status ON employee_requests(status);
@@ -125,7 +136,8 @@ CREATE TABLE IF NOT EXISTS issued_letters (
     reference_number   TEXT,
     ref_no             TEXT,
     content_snapshot   TEXT,
-    created_at         TIMESTAMPTZ DEFAULT NOW()
+    created_at         TIMESTAMPTZ DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_letters_employee_id ON issued_letters(employee_id);
 
@@ -142,6 +154,7 @@ CREATE TABLE IF NOT EXISTS monthly_attendance (
     hours_overtime NUMERIC(5,1) DEFAULT 0,
     hours_late     NUMERIC(5,1) DEFAULT 0,
     created_at     TIMESTAMPTZ DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(emp_id, month_year)
 );
 CREATE INDEX IF NOT EXISTS idx_attendance_emp_id ON monthly_attendance(emp_id);
@@ -186,7 +199,8 @@ CREATE TABLE IF NOT EXISTS vehicles (
     year         INT,
     status       TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','maintenance')),
     company_id   UUID REFERENCES companies(id) ON DELETE SET NULL,
-    created_at   TIMESTAMPTZ DEFAULT NOW()
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_vehicles_company_id ON vehicles(company_id);
 
@@ -199,7 +213,8 @@ CREATE TABLE IF NOT EXISTS vehicle_documents (
     doc_type     TEXT NOT NULL,
     doc_number   TEXT,
     expiry_date  DATE,
-    created_at   TIMESTAMPTZ DEFAULT NOW()
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_vehicle_docs_vehicle_id ON vehicle_documents(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_docs_expiry_date ON vehicle_documents(expiry_date);
@@ -231,8 +246,36 @@ CREATE TABLE IF NOT EXISTS system_settings (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     setting_key   TEXT UNIQUE NOT NULL,
     setting_value TEXT,
-    created_at    TIMESTAMPTZ DEFAULT NOW()
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ─────────────────────────────────────────────
+-- Auto-update trigger for updated_at
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOR t IN
+        SELECT unnest(ARRAY[
+            'companies', 'employees', 'system_users', 'employee_documents',
+            'employee_assets', 'employee_requests', 'issued_letters',
+            'monthly_attendance', 'vehicles', 'vehicle_documents',
+            'system_settings', 'payroll_records'
+        ])
+    LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS trg_%s_updated_at ON %s', t, t);
+        EXECUTE format('CREATE TRIGGER trg_%s_updated_at BEFORE UPDATE ON %s FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t, t);
+    END LOOP;
+END $$;
 
 -- ═══════════════════════════════════════════════════════════
 -- END OF SCHEMA
