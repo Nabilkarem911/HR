@@ -11,6 +11,14 @@ const router = express.Router();
 // ── GET /api/users ──
 router.get('/', rbacMiddleware('users', 'view'), async (req, res, next) => {
   try {
+    const { employee_profile_id } = req.query;
+    if (employee_profile_id) {
+      const row = await queryOne(
+        `SELECT id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, created_at FROM system_users WHERE employee_profile_id = $1 AND deleted_at IS NULL`,
+        [employee_profile_id]
+      );
+      return res.json({ data: row });
+    }
     const rows = await queryAll(
       `SELECT id, email, full_name, role, company_id, custom_permissions, phone, employee_profile_id, created_at FROM system_users WHERE role != 'employee' AND deleted_at IS NULL ORDER BY created_at DESC`
     );

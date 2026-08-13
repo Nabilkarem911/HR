@@ -329,6 +329,7 @@ function from(rawTable) {
 
             if (state.singleMode) {
                 const row = (data && data.data) ? data.data : data;
+                if (Array.isArray(row)) return { data: row[0] || null, error: null };
                 return { data: row, error: null };
             }
 

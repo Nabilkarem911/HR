@@ -26,6 +26,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settings');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── Security & Utility Middleware ──
 app.use(helmet({ contentSecurityPolicy: false }));
