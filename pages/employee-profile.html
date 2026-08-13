@@ -482,7 +482,7 @@
             document.getElementById('emp-position').value = employee.position || '';
             document.getElementById('emp-basic-salary').value = employee.basic_salary;
             document.getElementById('emp-contract-salary').value = employee.contract_salary || '';
-            document.getElementById('emp-hire-date').value = employee.hire_date;
+            document.getElementById('emp-hire-date').value = employee.hire_date ? employee.hire_date.split('T')[0] : '';
             document.getElementById('emp-status').value = employee.status;
             document.getElementById('emp-company-id').value = employee.company_id || '';
             document.getElementById('emp-iqama').value = employee.iqama_number || '';
