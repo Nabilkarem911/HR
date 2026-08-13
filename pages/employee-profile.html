@@ -129,8 +129,8 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني *</label>
-                    <input type="email" id="emp-email" required
+                    <label class="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني</label>
+                    <input type="email" id="emp-email"
                         class="w-full text-left border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         dir="ltr">
                 </div>
@@ -1030,10 +1030,14 @@
                             .eq('employee_profile_id', savedEmp.id)
                             .single();
 
+                        const essIdentifier = savedEmp.email || savedEmp.phone;
+                        if (!essIdentifier) {
+                            throw new Error('يجب إدخال البريد الإلكتروني أو رقم الهاتف لتفعيل بوابة الخدمة الذاتية.');
+                        }
                         const userPayload = {
                             employee_profile_id: savedEmp.id,
                             full_name: (savedEmp.first_name || '') + ' ' + (savedEmp.last_name || ''),
-                            email: savedEmp.email,
+                            email: essIdentifier,
                             phone: savedEmp.phone,
                             role: 'employee',
                             company_id: savedEmp.company_id,
