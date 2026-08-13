@@ -36,6 +36,12 @@ CREATE INDEX IF NOT EXISTS idx_system_users_deleted_at ON system_users(deleted_a
 CREATE INDEX IF NOT EXISTS idx_system_users_phone ON system_users(phone);
 
 -- ─────────────────────────────────────────────
+-- 3.5 Fix existing empty-string emails (NULL doesn't violate UNIQUE)
+-- ─────────────────────────────────────────────
+UPDATE employees SET email = NULL WHERE email = '';
+UPDATE system_users SET email = NULL WHERE email = '';
+
+-- ─────────────────────────────────────────────
 -- 4. Auto-update trigger for updated_at
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at_column()

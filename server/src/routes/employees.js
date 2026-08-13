@@ -75,26 +75,38 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
   try {
     const b = req.body;
     const empCode = 'EMP-' + Date.now().toString().slice(-6);
+    const email = b.email && b.email.trim() ? b.email.trim() : null;
     const row = await queryOne(
       `INSERT INTO employees (emp_code, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-      [empCode, b.first_name, b.last_name, b.email, b.phone, b.position, b.job_title, b.basic_salary, b.contract_salary, b.hire_date, b.hire_date, b.status || 'active', b.company_id, b.iqama_number, b.nationality, b.iqama_profession]
+      [empCode, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null]
     );
     res.status(201).json({ data: row });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err.code === '23505' && err.constraint === 'employees_email_key') {
+      return res.status(409).json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل' });
+    }
+    next(err);
+  }
 });
 
 // ── PUT /api/employees/:id ──
 router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
+    const email = b.email && b.email.trim() ? b.email.trim() : null;
     const row = await queryOne(
       `UPDATE employees SET first_name=$1, last_name=$2, email=$3, phone=$4, position=$5, job_title=$6, basic_salary=$7, contract_salary=$8, hire_date=$9, join_date=$10, status=$11, company_id=$12, iqama_number=$13, nationality=$14, iqama_profession=$15 WHERE id=$16 AND deleted_at IS NULL RETURNING *`,
-      [b.first_name, b.last_name, b.email, b.phone, b.position, b.job_title, b.basic_salary, b.contract_salary, b.hire_date, b.hire_date, b.status, b.company_id, b.iqama_number, b.nationality, b.iqama_profession, req.params.id]
+      [b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status, b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Employee not found' });
     res.json({ data: row });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err.code === '23505' && err.constraint === 'employees_email_key') {
+      return res.status(409).json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل' });
+    }
+    next(err);
+  }
 });
 
 // ── DELETE /api/employees/:id (soft delete) ──
