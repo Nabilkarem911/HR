@@ -19,7 +19,7 @@ async function getList(req, res, next) {
   try {
     const { search, status, company_id } = req.query;
     const params = [];
-    let where = ['deleted_at IS NULL'];
+    let where = ['e.deleted_at IS NULL'];
     let idx = 1;
 
     if (search) {
