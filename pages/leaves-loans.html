@@ -237,6 +237,33 @@
     </div>
 </div>
 
+<!-- Rejection Reason Modal -->
+<div id="rejection-modal"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-red-50 text-red-800">
+            <h3 class="font-bold text-lg"><i class="fa-solid fa-circle-xmark ml-1"></i> رفض الطلب</h3>
+        </div>
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="reject-id">
+            <input type="hidden" id="reject-type">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">سبب الرفض <span class="text-red-500">*</span></label>
+                <textarea id="reject-reason" rows="4" required
+                    class="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                    placeholder="اكتب سبب الرفض الذي سيظهر للموظف..."></textarea>
+                <p class="text-xs text-slate-500 mt-2"><i class="fa-solid fa-info-circle"></i> سيتم إظهار هذا السبب للموظف في بوابة الخدمة الذاتية.</p>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 flex gap-2 justify-end bg-slate-50 shrink-0">
+            <button onclick="closeRejectionModal()"
+                class="px-4 py-2 text-slate-500 hover:bg-slate-200 rounded-lg text-sm font-medium">إلغاء</button>
+            <button onclick="confirmRejection()"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold">تأكيد الرفض</button>
+        </div>
+    </div>
+</div>
+
 <script>
     window.activeTab = 'leaves';
 
@@ -372,13 +399,13 @@
                     }
 
                     html += `
-                        <td class="px-6 py-4 text-center">${getFsmBadge(item.status)}</td>
+                        <td class="px-6 py-4 text-center">${getFsmBadge(item.status)}${item.status === 'rejected' && item.hr_notes ? `<div class="mt-1 text-xs text-red-600 font-medium max-w-[200px] truncate" title="${item.hr_notes}"><i class="fa-solid fa-comment-dots"></i> ${item.hr_notes}</div>` : ''}</td>
                         <td class="px-6 py-4 text-center">
                             ${item.status === 'pending' ? (
                                 (window.hasPerm && window.hasPerm('requests', 'edit')) ? `
                                     <div class="flex justify-center gap-1">
                                         <button onclick="openApprovalModal('${item.id}', '${type}')" class="text-emerald-600 bg-white border border-emerald-200 hover:bg-emerald-50 px-3 py-1.5 rounded-lg shadow-sm transition-colors" title="قبول"><i class="fa-solid fa-check"></i></button>
-                                        <button onclick="updateFsmStatus('${item.id}', '${type}', 'rejected')" class="text-red-600 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg shadow-sm transition-colors" title="رفض"><i class="fa-solid fa-times"></i></button>
+                                        <button onclick="openRejectionModal('${item.id}', '${type}')" class="text-red-600 bg-white border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg shadow-sm transition-colors" title="رفض"><i class="fa-solid fa-times"></i></button>
                                     </div>
                                 ` : `<span class="text-xs text-slate-400"><i class="fa-solid fa-lock"></i> صلاحية مطلوبة</span>`
                             ) : `<span class="text-xs text-slate-400">لا إجراءات</span>`}
@@ -692,13 +719,51 @@
 
     window.updateFsmStatus = async function (id, type, newStatus) {
         if (window.hasPerm && !window.hasPerm('requests', 'edit')) return alert('Security Block: غير مصرح لك بتغيير حالة الطلب.');
-        // Fallback for independent Rejections
-        if (!confirm(`هل أنت متأكد من تغيير حالة الطلب لـ رفض؟`)) return;
         try {
             const { error } = await window.db.from('employee_requests').update({ status: newStatus }).eq('id', id);
             if (error) throw error;
             loadFsmData(activeTab);
         } catch (e) { console.error(e); }
+    }
+
+    // ================== REJECTION WITH REASON MODAL ==================
+    window.openRejectionModal = function (id, type) {
+        if (window.hasPerm && !window.hasPerm('requests', 'edit')) return alert('Security Block: غير مصرح لك برفض الطلبات.');
+        document.getElementById('reject-id').value = id;
+        document.getElementById('reject-type').value = type;
+        document.getElementById('reject-reason').value = '';
+        const mod = document.getElementById('rejection-modal');
+        mod.classList.remove('hidden'); mod.classList.add('flex');
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) mainContent.style.overflow = 'hidden';
+        setTimeout(() => document.getElementById('reject-reason').focus(), 100);
+    }
+
+    window.closeRejectionModal = function () {
+        const mod = document.getElementById('rejection-modal');
+        mod.classList.add('hidden'); mod.classList.remove('flex');
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) mainContent.style.overflow = 'auto';
+    }
+
+    window.confirmRejection = async function () {
+        if (window.hasPerm && !window.hasPerm('requests', 'edit')) return alert('Security Block: غير مصرح لك برفض الطلبات.');
+        const id = document.getElementById('reject-id').value;
+        const reason = document.getElementById('reject-reason').value.trim();
+        if (!reason) {
+            alert('يرجى كتابة سبب الرفض.');
+            return;
+        }
+        closeRejectionModal();
+
+        try {
+            const { error } = await window.db.from('employee_requests').update({ status: 'rejected', hr_notes: reason }).eq('id', id);
+            if (error) throw error;
+            loadFsmData(activeTab);
+        } catch (e) {
+            console.error(e);
+            alert('خطأ في رفض الطلب.');
+        }
     }
 
     // Filters & Init

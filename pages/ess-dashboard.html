@@ -353,6 +353,13 @@
                     details = `المبلغ: ${req.amount || 0} ر.س<br><span class="text-xs text-slate-400">السبب: ${req.reason || '-'}</span>`;
                 }
 
+                let hrNotes = req.hr_notes || '-';
+                if (req.status === 'rejected' && req.hr_notes) {
+                    hrNotes = `<span class="text-red-600 font-medium"><i class="fa-solid fa-circle-info"></i> ${req.hr_notes}</span>`;
+                } else if (req.status === 'approved' && req.hr_notes) {
+                    hrNotes = `<span class="text-emerald-600 font-medium"><i class="fa-solid fa-circle-check"></i> ${req.hr_notes}</span>`;
+                }
+
                 const dDate = new Date(req.created_at).toISOString().split('T')[0];
 
                 html += `
@@ -360,7 +367,7 @@
                         <td class="px-6 py-4 font-bold text-sm bg-slate-50 border-l border-slate-100">${typeLabel}</td>
                         <td class="px-6 py-4 text-sm text-slate-700 font-medium">${details}</td>
                         <td class="px-6 py-4 text-sm font-mono text-slate-500">${dDate}</td>
-                        <td class="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate" title="${req.hr_notes || '-'}">${req.hr_notes || '-'}</td>
+                        <td class="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate" title="${req.hr_notes || '-'}">${hrNotes}</td>
                         <td class="px-6 py-4 text-center">${badge}</td>
                     </tr>
                 `;

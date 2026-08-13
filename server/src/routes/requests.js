@@ -60,8 +60,14 @@ router.put('/:id', rbacMiddleware('requests', 'edit'), auditLog('requests'), asy
   try {
     const b = req.body;
     const row = await queryOne(
-      `UPDATE employee_requests SET status = $1, paid_amount = COALESCE($2, paid_amount) WHERE id = $3 RETURNING *`,
-      [b.status, b.paid_amount || null, req.params.id]
+      `UPDATE employee_requests
+       SET status = COALESCE($1, status),
+           paid_amount = COALESCE($2, paid_amount),
+           hr_notes = COALESCE($3, hr_notes),
+           is_paid = COALESCE($4, is_paid),
+           auto_deduct = COALESCE($5, auto_deduct)
+       WHERE id = $6 RETURNING *`,
+      [b.status || null, b.paid_amount || null, b.hr_notes || null, b.is_paid !== undefined ? b.is_paid : null, b.auto_deduct !== undefined ? b.auto_deduct : null, req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Request not found' });
     res.json({ data: row });
