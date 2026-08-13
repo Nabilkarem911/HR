@@ -329,12 +329,12 @@ function from(rawTable) {
             }
 
             if (state.singleMode) {
-                const row = (data && data.data) ? data.data : data;
+                const row = (data && data.data !== undefined) ? data.data : data;
                 if (Array.isArray(row)) return { data: row[0] || null, error: null };
-                return { data: row, error: null };
+                return { data: row || null, error: null };
             }
 
-            const rows = (data && data.data) ? data.data : data;
+            const rows = (data && data.data !== undefined) ? data.data : data;
             return { data: rows, error: null };
         },
 
