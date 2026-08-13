@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const { authMiddleware } = require('./middleware/auth');
 const { attachPermissions } = require('./middleware/rbac');
+const runMigrations = require('./scripts/runMigrations');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -95,8 +96,22 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`[Server] HR-Gpack API running on port ${PORT}`);
-});
+
+async function startServer() {
+  try {
+    console.log('[startup] Running database migrations...');
+    await runMigrations();
+    console.log('[startup] Migrations complete.');
+  } catch (err) {
+    console.error('[startup] Migration error:', err.message);
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`[Server] HR-Gpack API running on port ${PORT}`);
+  });
+}
+
+startServer();
 
 module.exports = app;
