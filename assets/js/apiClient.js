@@ -314,6 +314,12 @@ function from(rawTable) {
                 path += `?${qs}`;
             }
 
+            // Cache-bust GET requests to avoid stale responses from browser/proxy caches
+            if (state.method === 'GET') {
+                const cb = `_t=${Date.now()}`;
+                path = path.includes('?') ? `${path}&${cb}` : `${path}?${cb}`;
+            }
+
             // For upsert, use /batch endpoint if array
             let body = state.body;
             if (state.isUpsert && state.insertArray) {
