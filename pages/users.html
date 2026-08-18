@@ -561,21 +561,25 @@
 
         try {
             const payload = { email: email, phone: phone, full_name: name, role: role, company_id: comp, custom_permissions: jsonPerms };
+            const pass = document.getElementById('su-pass').value.trim();
 
             if (isUpdate) {
+                if (pass) {
+                    if (pass.length < 6) throw new Error('كلمة المرور يجب ألا تقل عن 6 أحرف.');
+                    payload.password = pass;
+                }
                 const { error: updateErr } = await window.db.from('system_users').update(payload).eq('id', id);
                 if (updateErr) throw new Error(updateErr.code === '23505' ? 'رقم الجوال أو البريد الإلكتروني مستخدم بالفعل.' : updateErr.message);
                 alert('تم تحديث بيانات المستخدم بنجاح!');
                 closeSystemUserModal();
                 loadSystemUsers();
             } else {
-                const pass = document.getElementById('su-pass').value.trim();
                 if (!pass || pass.length < 6) throw new Error('كلمة المرور يجب ألا تقل عن 6 أحرف.');
 
                 // Create user via API (handles password hashing + insert)
                 payload.password = pass;
                 const { error: createErr } = await window.db.from('system_users').insert(payload);
-                if (createErr) throw new Error(createErr.code === '23505' ? 'هذا البريد الإلكتروني مسجل مسبقاً.' : createErr.message);
+                if (createErr) throw new Error(createErr.code === '23505' ? 'هذا البريد الإلكتروني مسجل مسبقا.' : createErr.message);
 
                 alert('تم إنشاء المستخدم وتخصيص صلاحياته بنجاح!');
                 closeSystemUserModal();
