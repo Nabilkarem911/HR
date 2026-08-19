@@ -94,15 +94,39 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
 router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
-    const email = b.email && b.email.trim() ? b.email.trim() : null;
+    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at'];
+    const sets = [];
+    const params = [];
+    let idx = 1;
+
+    for (const col of columns) {
+      if (b[col] !== undefined) {
+        if (col === 'email') {
+          const emailVal = b[col] && b[col].trim ? b[col].trim() : b[col];
+          params.push(emailVal || null);
+        } else if (col === 'basic_salary' || col === 'contract_salary') {
+          const num = b[col] === '' ? null : (isNaN(parseFloat(b[col])) ? null : parseFloat(b[col]));
+          params.push(num);
+        } else {
+          params.push(b[col] === '' ? null : b[col]);
+        }
+        sets.push(`${col} = $${idx++}`);
+      }
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(req.params.id);
     const row = await queryOne(
-      `UPDATE employees SET first_name=$1, last_name=$2, email=$3, phone=$4, position=$5, job_title=$6, basic_salary=$7, contract_salary=$8, hire_date=$9, join_date=$10, status=$11, company_id=$12, iqama_number=$13, nationality=$14, iqama_profession=$15 WHERE id=$16 AND deleted_at IS NULL RETURNING *`,
-      [b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status, b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, req.params.id]
+      `UPDATE employees SET ${sets.join(', ')} WHERE id=$${idx} AND deleted_at IS NULL RETURNING *`,
+      params
     );
     if (!row) return res.status(404).json({ error: 'Employee not found' });
     res.json({ data: row });
   } catch (err) {
-    if (err.code === '23505' && err.constraint === 'employees_email_key') {
+    if (err.code === '23505' && (err.constraint === 'employees_email_key' || err.constraint === 'idx_employees_email_unique')) {
       return res.status(409).json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل' });
     }
     next(err);

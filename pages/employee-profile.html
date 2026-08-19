@@ -904,7 +904,7 @@
         try {
             const { error } = await window.db
                 .from('employees')
-                .update({ deleted_at: new Date().toISOString() })
+                .delete()
                 .eq('id', empId);
             if (error) throw error;
             loadEmployees();
