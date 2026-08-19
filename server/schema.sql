@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS companies (
     created_at       TIMESTAMPTZ DEFAULT NOW(),
     updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_building_number ON companies(building_number);
 
 -- ─────────────────────────────────────────────
 -- 2. employees
@@ -53,7 +52,6 @@ CREATE INDEX IF NOT EXISTS idx_employees_company_id ON employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_employees_deleted_at ON employees(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_email_unique ON employees(email) WHERE deleted_at IS NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_emp_number ON employees(emp_number);
 
 -- ─────────────────────────────────────────────
 -- 3. system_users
