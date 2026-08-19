@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS employees (
     emp_code          TEXT,
     first_name        TEXT NOT NULL,
     last_name         TEXT NOT NULL,
-    email             TEXT UNIQUE,
+    email             TEXT,
     phone             TEXT,
     position          TEXT,
     job_title         TEXT,
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS employees (
 CREATE INDEX IF NOT EXISTS idx_employees_company_id ON employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_employees_deleted_at ON employees(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_email_unique ON employees(email) WHERE deleted_at IS NULL;
 
 -- ─────────────────────────────────────────────
 -- 3. system_users
