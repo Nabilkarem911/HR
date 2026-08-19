@@ -25,13 +25,14 @@
                 <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm">
                     <tr>
                         <th class="px-6 py-4 font-semibold">اسم المنشأة</th>
+                        <th class="px-6 py-4 font-semibold text-center">رقم المنشأة</th>
                         <th class="px-6 py-4 font-semibold text-center">تاريخ الإضافة</th>
                         <th class="px-6 py-4 font-semibold text-center">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-sm" id="companies-tbody">
                     <tr>
-                        <td colspan="3" class="text-center py-10">
+                        <td colspan="4" class="text-center py-10">
                             <div
                                 class="animate-spin inline-block w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full">
                             </div>
@@ -214,7 +215,7 @@
                 if (error) throw error;
 
                 if (data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-500">لا يوجد منشآت مضافة.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-500">لا يوجد منشآت مضافة.</td></tr>`;
                     return;
                 }
                 let html = '';
@@ -227,6 +228,9 @@
                                 <i class="fa-solid fa-building text-xl"></i>
                             </div>
                             <span class="text-base">${c.name}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center text-slate-500 text-sm align-middle font-bold">
+                            <span class="inline-block px-3 py-1 rounded-lg bg-amber-100 text-amber-700 font-mono text-sm">#${c.building_number || '-'}</span>
                         </td>
                         <td class="px-6 py-4 text-center text-slate-500 text-sm align-middle font-bold">
                             <i class="fa-solid fa-calendar-alt ml-1 text-slate-400"></i> ${new Date(c.created_at).toLocaleDateString()}

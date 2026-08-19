@@ -71,19 +71,30 @@ router.get('/:id', async (req, res, next) => {
 });
 
 // ── POST /api/employees ──
+function buildEmpCode(buildingNumber, empNumber) {
+  const suffix = String(empNumber).padStart(3, '0');
+  return buildingNumber != null ? `${buildingNumber}-${suffix}` : suffix;
+}
+
 router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name', 'last_name']), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
-    const empCode = 'EMP-' + Date.now().toString().slice(-6);
+    const { n: empNumber } = await queryOne("SELECT nextval('employees_emp_number_seq') as n");
+    let buildingNumber = null;
+    if (b.company_id) {
+      const company = await queryOne('SELECT building_number FROM companies WHERE id = $1 AND deleted_at IS NULL', [b.company_id]);
+      if (company) buildingNumber = company.building_number;
+    }
+    const empCode = buildEmpCode(buildingNumber, empNumber);
     const email = b.email && b.email.trim() ? b.email.trim() : null;
     const row = await queryOne(
-      `INSERT INTO employees (emp_code, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
-      [empCode, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null]
+      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null]
     );
     res.status(201).json({ data: row });
   } catch (err) {
-    if (err.code === '23505' && err.constraint === 'employees_email_key') {
+    if (err.code === '23505' && (err.constraint === 'employees_email_key' || err.constraint === 'idx_employees_email_unique')) {
       return res.status(409).json({ error: 'هذا البريد الإلكتروني مستخدم بالفعل' });
     }
     next(err);
@@ -116,6 +127,16 @@ router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), a
 
     if (sets.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    // Recompute emp_code if company changes, keeping the fixed employee serial
+    if (b.company_id !== undefined) {
+      const company = await queryOne('SELECT building_number FROM companies WHERE id = $1 AND deleted_at IS NULL', [b.company_id]);
+      if (!company) return res.status(404).json({ error: 'Company not found' });
+      const emp = await queryOne('SELECT emp_number FROM employees WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
+      if (!emp) return res.status(404).json({ error: 'Employee not found' });
+      sets.push(`emp_code = $${idx++}`);
+      params.push(buildEmpCode(company.building_number, emp.emp_number));
     }
 
     params.push(req.params.id);

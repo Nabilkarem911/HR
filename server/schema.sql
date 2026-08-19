@@ -6,17 +6,22 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Sequences for auto-incrementing business numbers
+CREATE SEQUENCE IF NOT EXISTS companies_building_number_seq START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS employees_emp_number_seq START WITH 1;
+
 -- ─────────────────────────────────────────────
 -- 1. companies
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS companies (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name        TEXT NOT NULL,
-    deleted_at  TIMESTAMPTZ,
-    created_at  TIMESTAMPTZ DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ DEFAULT NOW()
+    id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name             TEXT NOT NULL,
+    building_number  INTEGER NOT NULL DEFAULT nextval('companies_building_number_seq'),
+    deleted_at       TIMESTAMPTZ,
+    created_at       TIMESTAMPTZ DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
--- indexes on deleted_at are in migrations for existing databases
+CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_building_number ON companies(building_number);
 
 -- ─────────────────────────────────────────────
 -- 2. employees
@@ -24,6 +29,7 @@ CREATE TABLE IF NOT EXISTS companies (
 CREATE TABLE IF NOT EXISTS employees (
     id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     emp_code          TEXT,
+    emp_number        INTEGER NOT NULL DEFAULT nextval('employees_emp_number_seq'),
     first_name        TEXT NOT NULL,
     last_name         TEXT NOT NULL,
     email             TEXT,
@@ -47,6 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_employees_company_id ON employees(company_id);
 CREATE INDEX IF NOT EXISTS idx_employees_deleted_at ON employees(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_email_unique ON employees(email) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_emp_number ON employees(emp_number);
 
 -- ─────────────────────────────────────────────
 -- 3. system_users

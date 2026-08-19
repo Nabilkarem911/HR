@@ -33,7 +33,7 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', rbacMiddleware('companies', 'add'), validateBody(['name']), auditLog('companies'), async (req, res, next) => {
   try {
     const { name } = req.body;
-    const row = await queryOne(`INSERT INTO companies (name) VALUES ($1) RETURNING *`, [name]);
+    const row = await queryOne(`INSERT INTO companies (name, building_number) VALUES ($1, nextval('companies_building_number_seq')) RETURNING *`, [name]);
     res.status(201).json({ data: row });
   } catch (err) { next(err); }
 });
