@@ -337,6 +337,62 @@
             } catch (e) { console.error('prefillFromQuery', e); }
         }
 
+        function fmtDate(dateInput) {
+            if (!dateInput) return 'غير مسجل';
+            if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+                const [y, m, d] = dateInput.split('T')[0].split('-');
+                return `${d}-${m}-${y}`;
+            }
+            const x = new Date(dateInput);
+            if (isNaN(x)) return dateInput;
+            return `${String(x.getDate()).padStart(2, '0')}-${String(x.getMonth() + 1).padStart(2, '0')}-${x.getFullYear()}`;
+        }
+
+        function renderLetterTemplate(emp, companyName, letterType, displaySalary) {
+            const fullName = (`${emp.first_name || ''} ${emp.last_name || ''}`).trim();
+            const title = emp.job_title || 'موظف';
+            const hireDate = fmtDate(emp.hire_date);
+
+            if (letterType === 'تعريف بالراتب') {
+                return `
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن السيد/ ${fullName} يعمل لديها بمسمى وظيفي ${title}، وذلك اعتباراً من تاريخ ${hireDate} وحتى تاريخه، ولا يزال على رأس عمله.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">ويتقاضى الموظف راتباً شهرياً إجمالياً قدره ${displaySalary} ريال سعودي، موزعاً وفقاً للبيانات الوظيفية والمالية المعتمدة لدى الشركة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وقد أُعطي هذا التعريف بناءً على طلبه دون أدنى مسؤولية مالية أو قانونية على الشركة تجاه أي طرف آخر.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وتفضلوا بقبول فائق الاحترام والتقدير.</p>`;
+            }
+            if (letterType === 'شهادة خبرة') {
+                return `
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن السيد/ ${fullName} قد عمل لديها بوظيفة ${title}، وذلك خلال الفترة من ${hireDate} وحتى تاريخه.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وخلال فترة عمله، تولى الموظف عدداً من المهام والمسؤوليات المرتبطة بطبيعة عمله، وأدى واجباته الوظيفية وفقاً للأنظمة والإجراءات المعتمدة لدى الشركة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وقد مُنحت له هذه الشهادة بناءً على طلبه، تقديراً لفترة عمله لدى الشركة، دون أن يترتب عليها أي التزام مستقبلي على الشركة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وتتمنى له الشركة دوام التوفيق والنجاح في مسيرته المهنية.</p>`;
+            }
+            if (letterType === 'خطاب عدم ممانعة') {
+                return `
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">إلى من يهمه الأمر،</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأنه لا مانع لديها من قيام الموظف / ${fullName}، والذي يعمل لديها بمسمى وظيفي ${title} اعتباراً من تاريخ ${hireDate}، بالسفر أو استخراج تأشيرة أو إجراء المعاملات الحكومية التي تتطلب موافقة جهة العمل.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وقد تم إصدار خطاب عدم الممانعة هذا بناءً على طلب الموظف، ولا يُعد هذا الخطاب بأي حال من الأحوال تنازلاً عن أي من حقوق الشركة أو التزامات الموظف المنصوص عليها في عقد العمل أو اللوائح والسياسات الداخلية المعتمدة، ويظل سارياً للغرض المحدد أعلاه فقط.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وتفضلوا بقبول خالص التحية والتقدير.</p>`;
+            }
+            if (letterType === 'خطاب إنذار') {
+                return `
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;"><strong>الموضوع:</strong> إنذار وظيفي</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">السيد / ${fullName}، المسمى الوظيفي: ${title}</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">إشارةً إلى المخالفة الوظيفية المتمثلة في [.........................................]، فقد تبين للإدارة عدم التزامكم بسياسات ولائحة العمل المعتمدة لدى الشركة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وعليه، نود إشعاركم بأن هذا الخطاب يُعد إنذاراً رسمياً، ونؤكد ضرورة الالتزام الكامل بالأنظمة والتعليمات وتلافي تكرار المخالفة مستقبلاً.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وعليه، يرجى التعامل مع هذا الإنذار بكل جدية والالتزام بما ورد أعلاه اعتباراً من تاريخه.</p>`;
+            }
+            if (letterType === 'إشعار استقطاع') {
+                return `
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;"><strong>الموضوع:</strong> إشعار باستقطاع من المستحقات المالية</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">السيد / ${fullName}،</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">نفيدكم بأنه بناءً على [سبب الاستقطاع]، وبعد استكمال الإجراءات الإدارية ذات العلاقة، فقد تقرر استقطاع مبلغ قدره [المبلغ] ريال سعودي من مستحقاتكم المالية عن شهر [الشهر]، وذلك وفقاً لما تقضي به الأنظمة واللوائح والسياسات المعتمدة لدى الشركة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">ويأتي هذا الإجراء بناءً على الواقعة/المخالفة الموضحة أعلاه، مع حفظ كافة حقوق الشركة والموظف وفقاً للأنظمة واللوائح ذات الصلة.</p>
+                    <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">يرجى العلم بأن هذا الإشعار يُعد توثيقاً رسمياً للإجراء المتخذ، وقد تم تسجيله ضمن السجل الوظيفي للموظف.</p>`;
+            }
+            return `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">خطاب رسمي بخصوص الموظف ${fullName}.</p>`;
+        }
+
         async function fetchEmployeesList() {
             const select = document.getElementById('gen-emp-id');
             try {
@@ -448,30 +504,7 @@
             const { data: compData } = await window.db.from('companies').select('name').eq('id', emp.company_id).single();
             const companyName = compData ? compData.name : 'إدارة الشركة';
 
-            let contentHtml = '';
-            if (letterType === 'تعريف بالراتب') {
-                contentHtml = `
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن الموظف / ${fullName}، التحق بالعمل لدينا اعتباراً من تاريخ ${hireDate} ولا يزال على رأس عمله.</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وهو يشغل حالياً وظيفة (${title})، ويتقاضى راتباً أساسياً شهرياً وقدره ${displaySalary} ريال سعودي.</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">وقد أُعطي هذا التعريف بناءً على طلبه دون أدنى مسؤولية مالية أو قانونية تجاه الشركة.</p>`;
-            } else if (letterType === 'خطاب إنذار') {
-                contentHtml = `
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">السيد / ${fullName}،</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تقوم ${companyName} بتوجيه هذا الإنذار الرسمي إليكم نظراً لمخالفتكم سياسات ولائحة العمل بالمنشأة.</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">نأمل منكم الالتزام التام بالتعليمات وتصحيح المسار الوظيفي الخاص بكم.</p>`;
-            } else if (letterType === 'شهادة خبرة') {
-                contentHtml = `
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن السيد / ${fullName} قد عمل لدينا بوظيفة ${title}، وذلك اعتباراً من تاريخ ${hireDate}.</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">خلال فترة عمله المذكورة، كان الموظف مثالاً للالتزام وتأدية المهام الموكلة إليه بمهنية عالية.</p>`;
-            } else if (letterType === 'خطاب عدم ممانعة') {
-                contentHtml = `
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأنه لا مانع لديها من قيام الموظف / ${fullName}، والذي يعمل لدينا بوظيفة (${title})، بالسفر أو استخراج تأشيرة أو إجراء المعاملات الحكومية التي تتطلب موافقة جهة العمل.</p>`;
-            } else if (letterType === 'إشعار استقطاع') {
-                contentHtml = `
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">السيد / ${fullName}،</p>
-                <p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">نود إشعاركم بأنه سيتم تطبيق استقطاع مالي من راتبكم بسبب مخالفاتكم الإدارية أو التزامات مالية سابقة.</p>`;
-            }
-            editor.innerHTML = contentHtml;
+            editor.innerHTML = renderLetterTemplate(emp, companyName, letterType, displaySalary);
         }
 
         document.getElementById('gen-emp-id').addEventListener('change', generateLivePreview);
@@ -496,8 +529,8 @@
 
                 const finalEditedHtml = document.getElementById('live-editor').innerHTML.trim();
                 const tDate = new Date();
-                const todayStr = tDate.toISOString().split('T')[0];
-                const refNo = `REF-${todayStr.substring(0, 7).replace('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+                const todayStr = fmtDate(tDate);
+                const refNo = `REF-${tDate.toISOString().split('T')[0].substring(0, 7).replace('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
                 const { data: compData } = await window.db.from('companies').select('name').eq('id', emp.company_id).single();
                 const companyName = compData ? compData.name : 'إدارة الشركة';
@@ -514,22 +547,7 @@
                 else if (letterType === 'خطاب عدم ممانعة') { docTitleEl.innerText = 'خطاب عدم ممانعة (NOC)'; docTitleEl.style.color = '#111827'; }
                 else if (letterType === 'إشعار استقطاع') { docTitleEl.innerText = 'إشعار استقطاع والتزام'; docTitleEl.style.color = '#c2410c'; }
 
-                mainBodyEl.innerHTML = finalEditedHtml;
-
-                const { data: inserted, error: dbError } = await window.db.from('issued_letters').insert([{
-                    employee_id: emp.id, company_id: emp.company_id, letter_type: letterType, reference_number: refNo
-                }]).single();
-                if (dbError) throw dbError;
-
-                if (pendingRequestId && inserted && inserted.id) {
-                    await window.db.from('employee_requests').update({
-                        status: 'processed',
-                        letter_id: inserted.id,
-                        hr_notes: `تم إصدار الخطاب: ${refNo}`
-                    }).eq('id', pendingRequestId);
-                    pendingRequestId = null;
-                }
-
+                mainBodyEl.innerHTML = renderLetterTemplate(emp, companyName, letterType, displaySalary);
                 printNativePDF(document.getElementById('print-template').innerHTML);
                 await fetchArchive();
             } catch (error) {
@@ -566,7 +584,7 @@
                     }
                 }
 
-                const todayStr = (r.created_at || new Date().toISOString()).split('T')[0];
+                const todayStr = fmtDate(r.created_at || new Date());
                 const { data: compData } = await window.db.from('companies').select('name').eq('id', emp.company_id).single();
                 const companyName = compData ? compData.name : 'إدارة الشركة';
 
@@ -576,24 +594,13 @@
                 const docTitleEl = document.getElementById('pdf-doc-title');
                 const mainBodyEl = document.getElementById('pdf-main-body');
 
-                let contentHtml = '';
-                if (letterType === 'تعريف بالراتب') {
-                    docTitleEl.innerText = 'شهادة تعريف بالراتب';
-                    contentHtml = `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن الموظف / ${fullName}، التحق بالعمل لدينا اعتباراً من تاريخ ${hireDate} ولا يزال على رأس عمله. ويتقاضى راتباً قدره ${displaySalary} ريال.</p>`;
-                } else if (letterType === 'خطاب إنذار') {
-                    docTitleEl.innerText = 'خطاب إنذار'; docTitleEl.style.color = '#9f1239';
-                    contentHtml = `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تقوم ${companyName} بتوجيه هذا الإنذار الرسمي للموظف ${fullName}.</p>`;
-                } else if (letterType === 'شهادة خبرة') {
-                    docTitleEl.innerText = 'شهادة خبرة';
-                    contentHtml = `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">تشهد ${companyName} بأن ${fullName} عمل بوظيفة ${title} اعتباراً من تاريخ ${hireDate}.</p>`;
-                } else if (letterType === 'خطاب عدم ممانعة') {
-                    docTitleEl.innerText = 'خطاب عدم ممانعة (NOC)';
-                    contentHtml = `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">لا مانع لدى ${companyName} من قيام الموظف ${fullName} بالسفر أو استخراج تأشيرة.</p>`;
-                } else if (letterType === 'إشعار استقطاع') {
-                    docTitleEl.innerText = 'إشعار استقطاع والتزام'; docTitleEl.style.color = '#c2410c';
-                    contentHtml = `<p dir="rtl" style="text-align: right; font-size: 16px; margin-bottom: 15px;">نود إشعار الموظف ${fullName} بأنه سيتم تطبيق استقطاع مالي.</p>`;
-                }
-                mainBodyEl.innerHTML = contentHtml;
+                if (letterType === 'تعريف بالراتب') { docTitleEl.innerText = 'شهادة تعريف بالراتب'; docTitleEl.style.color = '#111827'; }
+                else if (letterType === 'خطاب إنذار') { docTitleEl.innerText = 'خطاب إنذار'; docTitleEl.style.color = '#9f1239'; }
+                else if (letterType === 'شهادة خبرة') { docTitleEl.innerText = 'شهادة خبرة'; docTitleEl.style.color = '#111827'; }
+                else if (letterType === 'خطاب عدم ممانعة') { docTitleEl.innerText = 'خطاب عدم ممانعة (NOC)'; docTitleEl.style.color = '#111827'; }
+                else if (letterType === 'إشعار استقطاع') { docTitleEl.innerText = 'إشعار استقطاع والتزام'; docTitleEl.style.color = '#c2410c'; }
+
+                mainBodyEl.innerHTML = renderLetterTemplate(emp, companyName, letterType, displaySalary);
                 printNativePDF(document.getElementById('print-template').innerHTML);
             } catch (error) {
                 console.error(error);
