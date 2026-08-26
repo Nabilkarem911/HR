@@ -93,7 +93,7 @@ router.delete('/', rbacMiddleware('attendance', 'edit'), auditLog('attendance'),
 
     if (req.user.role === 'super_admin') {
       const result = await query(
-        `DELETE FROM monthly_attendance WHERE ${clauses.join(' AND ')} RETURNING id`,
+        `DELETE FROM monthly_attendance a WHERE ${clauses.join(' AND ')} RETURNING id`,
         params
       );
       return res.json({ data: result.rows, deleted: result.rowCount });
