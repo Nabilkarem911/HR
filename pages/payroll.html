@@ -793,7 +793,7 @@
                 await window.db.from('payslips').delete().eq('month', month).eq('year', year).in('employee_id', empIds).eq('status', 'draft');
             }
 
-            const { error: insErr } = await window.db.from('payslips').insert(newPayloads);
+            const { error: insErr } = await window.db.from('payslips').upsert(newPayloads);
             if (insErr) throw insErr;
 
             // Render

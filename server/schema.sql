@@ -113,7 +113,22 @@ CREATE INDEX IF NOT EXISTS idx_emp_assets_employee_id ON employee_assets(employe
 CREATE INDEX IF NOT EXISTS idx_emp_assets_status ON employee_assets(status);
 
 -- ─────────────────────────────────────────────
--- 6. employee_requests (leaves, loans & letters)
+-- 6. issued_letters
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS issued_letters (
+    id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id        UUID REFERENCES employees(id) ON DELETE CASCADE,
+    letter_type        TEXT NOT NULL,
+    reference_number   TEXT,
+    ref_no             TEXT,
+    content_snapshot   TEXT,
+    created_at         TIMESTAMPTZ DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_letters_employee_id ON issued_letters(employee_id);
+
+-- ─────────────────────────────────────────────
+-- 7. employee_requests (leaves, loans & letters)
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS employee_requests (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -134,21 +149,6 @@ CREATE TABLE IF NOT EXISTS employee_requests (
 CREATE INDEX IF NOT EXISTS idx_emp_req_employee_id ON employee_requests(employee_id);
 CREATE INDEX IF NOT EXISTS idx_emp_req_status ON employee_requests(status);
 CREATE INDEX IF NOT EXISTS idx_emp_req_type ON employee_requests(request_type);
-
--- ─────────────────────────────────────────────
--- 7. issued_letters
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS issued_letters (
-    id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    employee_id        UUID REFERENCES employees(id) ON DELETE CASCADE,
-    letter_type        TEXT NOT NULL,
-    reference_number   TEXT,
-    ref_no             TEXT,
-    content_snapshot   TEXT,
-    created_at         TIMESTAMPTZ DEFAULT NOW(),
-    updated_at         TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE INDEX IF NOT EXISTS idx_letters_employee_id ON issued_letters(employee_id);
 
 -- ─────────────────────────────────────────────
 -- 8. monthly_attendance

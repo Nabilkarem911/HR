@@ -25,6 +25,9 @@ router.get('/:key', async (req, res, next) => {
 // ── PUT /api/settings/:key (upsert) ──
 router.put('/:key', async (req, res, next) => {
   try {
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     const { setting_value } = req.body;
     const row = await queryOne(
       `INSERT INTO system_settings (setting_key, setting_value) VALUES ($1, $2)
@@ -39,6 +42,9 @@ router.put('/:key', async (req, res, next) => {
 // ── POST /api/settings ──
 router.post('/', async (req, res, next) => {
   try {
+    if (req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     const { setting_key, setting_value } = req.body;
     const row = await queryOne(
       `INSERT INTO system_settings (setting_key, setting_value) VALUES ($1, $2)

@@ -597,16 +597,8 @@
                 hours_late: row.hours_late
             }));
 
-            // Delete old exactly matching records first to simulate an UPSERT safely (Since free tier APIs sometimes struggle with complex constraint upserts)
-            const empIds = currentGridData.map(r => r.emp_id);
-            if (empIds.length > 0) {
-                await window.db.from('monthly_attendance').delete()
-                    .eq('month_year', monthVal)
-                    .in('emp_id', empIds);
-            }
-
             // Insert new clean records
-            const { error: insErr } = await window.db.from('monthly_attendance').insert(upsertPayload);
+            const { error: insErr } = await window.db.from('monthly_attendance').upsert(upsertPayload);
             if (insErr) throw insErr;
 
             alert('✅ تم اعتماد سجل الوقت وحفظه بنجاح في الأرشيف.');
