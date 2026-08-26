@@ -250,6 +250,7 @@
     <script>
         let globalEmpList = [];
         let globalArchiveLetters = [];
+        let pendingRequestId = null;
 
         window.openArchiveModal = function () {
             if (window.hasPerm && !window.hasPerm('letters', 'view')) return alert('Security Block: غير مصرح لك باستعراض الأرشيف.');
@@ -293,6 +294,35 @@
         async function initLetters() {
             await fetchEmployeesList();
             await fetchArchive();
+            prefillFromQuery();
+        }
+
+        function prefillFromQuery() {
+            try {
+                const hash = window.location.hash.replace(/^#/, '');
+                const [page, qs] = hash.split('?');
+                if (!qs) return;
+                const params = new URLSearchParams(qs);
+                const emp = params.get('emp');
+                const type = params.get('type');
+                const req = params.get('req');
+
+                if (emp) {
+                    const sel = document.getElementById('gen-emp-id');
+                    if (sel.querySelector('option[value="' + emp + '"]')) {
+                        sel.value = emp;
+                        sel.dispatchEvent(new Event('change'));
+                    }
+                }
+                if (type) {
+                    const radio = document.querySelector('input[name="letter-type"][value="' + type + '"]');
+                    if (radio) {
+                        radio.checked = true;
+                        radio.dispatchEvent(new Event('change'));
+                    }
+                }
+                if (req) pendingRequestId = req;
+            } catch (e) { console.error('prefillFromQuery', e); }
         }
 
         async function fetchEmployeesList() {
@@ -474,10 +504,19 @@
 
                 mainBodyEl.innerHTML = finalEditedHtml;
 
-                const { error: dbError } = await window.db.from('issued_letters').insert([{
+                const { data: inserted, error: dbError } = await window.db.from('issued_letters').insert([{
                     employee_id: emp.id, company_id: emp.company_id, letter_type: letterType, reference_number: refNo
-                }]);
+                }]).single();
                 if (dbError) throw dbError;
+
+                if (pendingRequestId && inserted && inserted.id) {
+                    await window.db.from('employee_requests').update({
+                        status: 'processed',
+                        letter_id: inserted.id,
+                        hr_notes: `تم إصدار الخطاب: ${refNo}`
+                    }).eq('id', pendingRequestId);
+                    pendingRequestId = null;
+                }
 
                 printNativePDF(document.getElementById('print-template').innerHTML);
                 await fetchArchive();

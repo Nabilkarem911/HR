@@ -48,8 +48,9 @@ router.post('/', rbacMiddleware('requests', 'add'), auditLog('requests'), async 
     const b = req.body;
     const empId = req.user.employee_profile_id || b.employee_id;
     const row = await queryOne(
-      `INSERT INTO employee_requests (employee_id, request_type, start_date, end_date, total_days, amount, reason, status) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING *`,
-      [empId, b.request_type, b.start_date || null, b.end_date || null, b.total_days || null, b.amount || null, b.reason || null]
+      `INSERT INTO employee_requests (employee_id, request_type, letter_type, start_date, end_date, total_days, amount, reason, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending') RETURNING *`,
+      [empId, b.request_type, b.letter_type || null, b.start_date || null, b.end_date || null, b.total_days || null, b.amount || null, b.reason || null]
     );
     res.status(201).json({ data: row });
   } catch (err) { next(err); }
@@ -65,9 +66,11 @@ router.put('/:id', rbacMiddleware('requests', 'edit'), auditLog('requests'), asy
            paid_amount = COALESCE($2, paid_amount),
            hr_notes = COALESCE($3, hr_notes),
            is_paid = COALESCE($4, is_paid),
-           auto_deduct = COALESCE($5, auto_deduct)
-       WHERE id = $6 RETURNING *`,
-      [b.status || null, b.paid_amount || null, b.hr_notes || null, b.is_paid !== undefined ? b.is_paid : null, b.auto_deduct !== undefined ? b.auto_deduct : null, req.params.id]
+           auto_deduct = COALESCE($5, auto_deduct),
+           letter_id = COALESCE($6, letter_id),
+           letter_type = COALESCE($7, letter_type)
+       WHERE id = $8 RETURNING *`,
+      [b.status || null, b.paid_amount || null, b.hr_notes || null, b.is_paid !== undefined ? b.is_paid : null, b.auto_deduct !== undefined ? b.auto_deduct : null, b.letter_id || null, b.letter_type || null, req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Request not found' });
     res.json({ data: row });

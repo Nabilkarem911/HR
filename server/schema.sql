@@ -112,12 +112,14 @@ CREATE INDEX IF NOT EXISTS idx_emp_assets_employee_id ON employee_assets(employe
 CREATE INDEX IF NOT EXISTS idx_emp_assets_status ON employee_assets(status);
 
 -- ─────────────────────────────────────────────
--- 6. employee_requests (leaves & loans)
+-- 6. employee_requests (leaves, loans & letters)
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS employee_requests (
     id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     employee_id  UUID REFERENCES employees(id) ON DELETE CASCADE,
-    request_type TEXT NOT NULL CHECK (request_type IN ('leave','loan')),
+    request_type TEXT NOT NULL CHECK (request_type IN ('leave','loan','letter')),
+    letter_type  TEXT,
+    letter_id    UUID REFERENCES issued_letters(id) ON DELETE SET NULL,
     start_date   DATE,
     end_date     DATE,
     total_days   NUMERIC(5,1),
