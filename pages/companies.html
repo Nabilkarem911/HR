@@ -60,6 +60,12 @@
                 <input type="text" id="comp-name" required
                     class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
             </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">رابط شعار المنشأة (Logo URL)</label>
+                <input type="url" id="comp-logo" placeholder="https://example.com/logo.png"
+                    class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500">
+                <p class="text-xs text-slate-400 mt-1">رابط مباشر لملف الصورة (PNG/JPG).</p>
+            </div>
             <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100">
                 <button type="submit" id="btn-submit-comp"
                     class="px-5 py-2 rounded-lg text-white bg-amber-500 hover:bg-amber-600 transition-colors font-medium">حفظ</button>
@@ -125,6 +131,12 @@
                                     <span class="text-rose-500">*</span></label>
                                 <input type="text" id="edit-comp-name" required
                                     class="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-slate-50 font-bold text-slate-800 text-lg transition-shadow">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2">رابط شعار المنشأة</label>
+                                <input type="url" id="edit-comp-logo" placeholder="https://example.com/logo.png"
+                                    class="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 bg-slate-50 font-bold text-slate-800 text-lg transition-shadow">
+                                <p class="text-xs text-slate-400 mt-1">رابط مباشر لملف الصورة (PNG/JPG).</p>
                             </div>
                             <div class="flex justify-end pt-5 border-t border-slate-100">
                                 <button type="submit" id="btn-update-comp"
@@ -283,12 +295,13 @@
             const reqAction = id ? 'edit' : 'add';
             if (window.hasPerm && !window.hasPerm('companies', reqAction)) return alert(`Security Block: غير مصرح لك بـ ${reqAction === 'edit' ? 'التعديل' : 'الإضافة'}.`);
             const name = document.getElementById('comp-name').value;
+            const logo_url = document.getElementById('comp-logo').value.trim() || null;
             try {
                 if (id) {
-                    const { error } = await window.db.from('companies').update({ name }).eq('id', id);
+                    const { error } = await window.db.from('companies').update({ name, logo_url }).eq('id', id);
                     if (error) throw error;
                 } else {
-                    const { error } = await window.db.from('companies').insert([{ name }]);
+                    const { error } = await window.db.from('companies').insert([{ name, logo_url }]);
                     if (error) throw error;
                 }
                 closeCompanyModal();
@@ -302,14 +315,21 @@
         const comp360Modal = document.getElementById('company-360-modal');
         const comp360Content = document.getElementById('comp-360-content');
 
-        window.openCompany360 = function (id, name) {
+        window.openCompany360 = async function (id, name) {
             if (window.hasPerm && !window.hasPerm('companies', 'edit')) return alert('Security Block: غير مصرح لك بالتعديل.');
             if (comp360Modal.parentNode !== document.body) document.body.appendChild(comp360Modal);
 
             // Hydrate Basic Tab
+            let compData = { name };
+            try {
+                const { data } = await window.db.from('companies').select('*').eq('id', id).single();
+                if (data) compData = data;
+            } catch (e) { console.error(e); }
+
             document.getElementById('edit-comp-id').value = id;
-            document.getElementById('edit-comp-name').value = name;
-            document.getElementById('modal-360-title').innerText = name;
+            document.getElementById('edit-comp-name').value = compData.name || name;
+            document.getElementById('edit-comp-logo').value = compData.logo_url || '';
+            document.getElementById('modal-360-title').innerText = compData.name || name;
             document.getElementById('modal-360-id').innerText = `ID: ${id.split('-')[0]}...`; // Shortened UUID look
 
             // Setup Modal Visibility
@@ -439,6 +459,7 @@
             e.preventDefault();
             const id = document.getElementById('edit-comp-id').value;
             const name = document.getElementById('edit-comp-name').value;
+            const logo_url = document.getElementById('edit-comp-logo').value.trim() || null;
             const btn = document.getElementById('btn-update-comp');
 
             try {
@@ -446,7 +467,7 @@
                 btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري الحفظ...';
 
                 // Only update logic since "Create" goes through the main `company-modal`
-                const { error } = await window.db.from('companies').update({ name }).eq('id', id);
+                const { error } = await window.db.from('companies').update({ name, logo_url }).eq('id', id);
                 if (error) throw error;
 
                 // UI Reactivity Hooks

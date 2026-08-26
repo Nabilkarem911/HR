@@ -283,6 +283,11 @@
         <!-- Header -->
         <table style="width: 100%; border-bottom: 2px solid #1e1b4b; margin-bottom: 40px; padding-bottom: 20px;">
             <tr>
+                <td colspan="2" style="text-align: center; padding-bottom: 15px;">
+                    <img id="pdf-comp-logo" src="" alt="شعار الشركة" style="max-height: 80px; display: none;">
+                </td>
+            </tr>
+            <tr>
                 <td style="width: 50%; vertical-align: top; text-align: right;">
                     <h1 id="pdf-comp-name" style="margin: 0; color: #312e81; font-size: 28px; font-weight: bold;">إدارة
                         الشركة</h1>
@@ -342,11 +347,22 @@
 <script>
     let myProfile = null;
 
+    function fmtEssDate(dateInput) {
+        if (!dateInput) return 'غير مسجل';
+        if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) {
+            const [y, m, d] = dateInput.split('T')[0].split('-');
+            return `${d}-${m}-${y}`;
+        }
+        const x = new Date(dateInput);
+        if (isNaN(x)) return dateInput;
+        return `${String(x.getDate()).padStart(2, '0')}-${String(x.getMonth() + 1).padStart(2, '0')}-${x.getFullYear()}`;
+    }
+
     // --- Fetch Profile ---
     async function fetchEssProfile() {
         try {
             const { data, error } = await window.db.from('employees')
-                .select('*, companies(name)')
+                .select('*, companies(name, logo_url)')
                 .eq('id', window.currentEmpId)
                 .single();
 
@@ -358,7 +374,7 @@
             document.getElementById('ess-emp-company').innerText = myProfile.companies?.name || 'الشركة غير مسجلة';
             document.getElementById('ess-job-title').innerText = myProfile.job_title || myProfile.position || 'موظف';
             document.getElementById('ess-iqama').innerText = myProfile.iqama_number || '-';
-            document.getElementById('ess-join-date').innerText = myProfile.join_date || myProfile.hire_date || '-';
+            document.getElementById('ess-join-date').innerText = fmtEssDate(myProfile.join_date || myProfile.hire_date);
             document.getElementById('ess-salary').innerText = myProfile.basic_salary ? parseFloat(myProfile.basic_salary).toLocaleString() : '0';
 
         } catch (err) {
@@ -641,19 +657,20 @@
 
     // --- Salary Certificate ---
     window.printSalaryCertificate = async function () {
-        if (window.hasPerm && !window.hasPerm('letters', 'view')) return alert('Security Block: غير مصرح لك بتصدير الشهادة.');
         if (!myProfile) return alert("البيانات قيد التحميل, يرجى الانتظار...");
 
         // Inject data into hidden template
         const compName = myProfile.companies?.name || 'الشركة';
         const fullName = (myProfile.first_name || '') + ' ' + (myProfile.last_name || '');
-        const join = myProfile.join_date || myProfile.hire_date || 'غير مسجل';
+        const join = fmtEssDate(myProfile.join_date || myProfile.hire_date);
         const title = myProfile.job_title || myProfile.position || 'موظف';
         const salary = parseFloat(myProfile.contract_salary || myProfile.basic_salary || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
         const ref = `ESS-${Math.floor(Math.random() * 900000) + 100000}`;
-        const tDate = new Date().toISOString().split('T')[0];
+        const tDate = fmtEssDate(new Date());
 
         document.getElementById('pdf-comp-name').innerText = compName;
+        document.getElementById('pdf-comp-logo').src = myProfile.companies?.logo_url || '';
+        document.getElementById('pdf-comp-logo').style.display = myProfile.companies?.logo_url ? 'inline-block' : 'none';
         document.getElementById('pdf-ref-no').innerText = ref;
         document.getElementById('pdf-date').innerText = tDate;
         document.getElementById('pdf-comp-name-text').innerText = compName;
@@ -721,21 +738,22 @@
     }
 
     window.printArchivedLetter = function (letterId) {
-        if (window.hasPerm && !window.hasPerm('letters', 'view')) return alert('Security Block: غير مصرح لك بطباعة الأرشيف.');
         if (!myProfile) return alert("البيانات قيد التحميل...");
         const letter = essArchivedLetters.find(l => l.id == letterId);
         if (!letter) return alert("لم يتم العثور على الخطاب.");
 
         const compName = myProfile.companies?.name || 'الشركة';
         const fullName = (myProfile.first_name || '') + ' ' + (myProfile.last_name || '');
-        const join = myProfile.join_date || myProfile.hire_date || 'غير مسجل';
+        const join = fmtEssDate(myProfile.join_date || myProfile.hire_date);
         const title = myProfile.job_title || myProfile.position || 'موظف';
         const salary = parseFloat(myProfile.contract_salary || myProfile.basic_salary || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
         const ref = letter.reference_number || letter.ref_no || `ESS-${Math.floor(Math.random() * 90000 + 10000)}`;
-        const tDate = new Date(letter.created_at).toISOString().split('T')[0];
+        const tDate = fmtEssDate(letter.created_at);
 
         // Update Generic Template Headers
         document.getElementById('pdf-comp-name').innerText = compName;
+        document.getElementById('pdf-comp-logo').src = myProfile.companies?.logo_url || '';
+        document.getElementById('pdf-comp-logo').style.display = myProfile.companies?.logo_url ? 'inline-block' : 'none';
         document.getElementById('pdf-ref-no').innerText = ref;
         document.getElementById('pdf-date').innerText = tDate;
 

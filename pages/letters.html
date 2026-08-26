@@ -189,6 +189,11 @@
             <!-- Header -->
             <table style="width: 100%; border-bottom: 2px solid #1e1b4b; margin-bottom: 40px; padding-bottom: 20px;">
                 <tr>
+                    <td colspan="2" style="text-align: center; padding-bottom: 15px;">
+                        <img id="pdf-comp-logo" src="" alt="شعار الشركة" style="max-height: 80px; display: none;">
+                    </td>
+                </tr>
+                <tr>
                     <td style="width: 50%; vertical-align: top; text-align: right;">
                         <h1 id="pdf-header-company"
                             style="margin: 0; color: #312e81; font-size: 28px; font-weight: bold;">
@@ -532,12 +537,15 @@
                 const todayStr = fmtDate(tDate);
                 const refNo = `REF-${tDate.toISOString().split('T')[0].substring(0, 7).replace('-', '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-                const { data: compData } = await window.db.from('companies').select('name').eq('id', emp.company_id).single();
+                const { data: compData } = await window.db.from('companies').select('name, logo_url').eq('id', emp.company_id).single();
                 const companyName = compData ? compData.name : 'إدارة الشركة';
 
                 document.getElementById('pdf-ref-no').innerText = refNo;
                 document.getElementById('pdf-date-top').innerText = todayStr;
                 document.getElementById('pdf-header-company').innerText = companyName;
+                const logoEl = document.getElementById('pdf-comp-logo');
+                logoEl.src = compData?.logo_url || '';
+                logoEl.style.display = compData?.logo_url ? 'inline-block' : 'none';
                 const docTitleEl = document.getElementById('pdf-doc-title');
                 const mainBodyEl = document.getElementById('pdf-main-body');
 
@@ -585,12 +593,15 @@
                 }
 
                 const todayStr = fmtDate(r.created_at || new Date());
-                const { data: compData } = await window.db.from('companies').select('name').eq('id', emp.company_id).single();
+                const { data: compData } = await window.db.from('companies').select('name, logo_url').eq('id', emp.company_id).single();
                 const companyName = compData ? compData.name : 'إدارة الشركة';
 
                 document.getElementById('pdf-ref-no').innerText = r.reference_number;
                 document.getElementById('pdf-date-top').innerText = todayStr;
                 document.getElementById('pdf-header-company').innerText = companyName;
+                const logoEl = document.getElementById('pdf-comp-logo');
+                logoEl.src = compData?.logo_url || '';
+                logoEl.style.display = compData?.logo_url ? 'inline-block' : 'none';
                 const docTitleEl = document.getElementById('pdf-doc-title');
                 const mainBodyEl = document.getElementById('pdf-main-body');
 

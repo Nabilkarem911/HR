@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS companies (
     id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name             TEXT NOT NULL,
     building_number  INTEGER NOT NULL DEFAULT nextval('companies_building_number_seq'),
+    logo_url         TEXT,
     deleted_at       TIMESTAMPTZ,
     created_at       TIMESTAMPTZ DEFAULT NOW(),
     updated_at       TIMESTAMPTZ DEFAULT NOW()

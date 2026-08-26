@@ -32,8 +32,8 @@ router.get('/:id', async (req, res, next) => {
 // ── POST /api/companies ──
 router.post('/', rbacMiddleware('companies', 'add'), validateBody(['name']), auditLog('companies'), async (req, res, next) => {
   try {
-    const { name } = req.body;
-    const row = await queryOne(`INSERT INTO companies (name, building_number) VALUES ($1, nextval('companies_building_number_seq')) RETURNING *`, [name]);
+    const { name, logo_url } = req.body;
+    const row = await queryOne(`INSERT INTO companies (name, building_number, logo_url) VALUES ($1, nextval('companies_building_number_seq'), $2) RETURNING *`, [name, logo_url || null]);
     res.status(201).json({ data: row });
   } catch (err) { next(err); }
 });
@@ -41,8 +41,8 @@ router.post('/', rbacMiddleware('companies', 'add'), validateBody(['name']), aud
 // ── PUT /api/companies/:id ──
 router.put('/:id', rbacMiddleware('companies', 'edit'), auditLog('companies'), async (req, res, next) => {
   try {
-    const { name } = req.body;
-    const row = await queryOne(`UPDATE companies SET name = $1 WHERE id = $2 RETURNING *`, [name, req.params.id]);
+    const { name, logo_url } = req.body;
+    const row = await queryOne(`UPDATE companies SET name = $1, logo_url = $2 WHERE id = $3 RETURNING *`, [name, logo_url || null, req.params.id]);
     if (!row) return res.status(404).json({ error: 'Company not found' });
     res.json({ data: row });
   } catch (err) { next(err); }
