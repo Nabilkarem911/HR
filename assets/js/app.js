@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for hash changes
     window.addEventListener('hashchange', () => {
-        let hash = window.location.hash.substring(1);
+        let hash = window.location.hash.substring(1).split('?')[0];
         if (!hash) hash = 'dashboard';
         loadPage(hash);
     });
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (roleElem) roleElem.innerText = 'بوابة الموظف (ESS)';
                 }
 
-                let initialHash = window.location.hash.substring(1);
+                let initialHash = window.location.hash.substring(1).split('?')[0];
                 if (!initialHash || initialHash === 'login' || initialHash === 'dashboard') {
                     initialHash = 'ess-dashboard';
                     window.location.hash = '#ess-dashboard';
@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- 2. Token-based session check for Admins ---
         const { data: sessionData } = await window.db.auth.getSession();
-        let initialHash = window.location.hash.substring(1);
+        let initialHash = window.location.hash.substring(1).split('?')[0];
 
         if (sessionData && sessionData.session) {
             try {

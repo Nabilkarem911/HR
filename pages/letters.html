@@ -299,13 +299,25 @@
 
         function prefillFromQuery() {
             try {
-                const hash = window.location.hash.replace(/^#/, '');
-                const [page, qs] = hash.split('?');
-                if (!qs) return;
-                const params = new URLSearchParams(qs);
-                const emp = params.get('emp');
-                const type = params.get('type');
-                const req = params.get('req');
+                let emp, type, req;
+
+                // Prefer localStorage (clean, avoids & escaping issues)
+                const prefillStr = localStorage.getItem('letter_prefill');
+                if (prefillStr) {
+                    const prefill = JSON.parse(prefillStr);
+                    localStorage.removeItem('letter_prefill');
+                    emp = prefill.emp;
+                    type = prefill.type;
+                    req = prefill.req;
+                } else {
+                    const hash = window.location.hash.replace(/^#/, '');
+                    const [page, qs] = hash.split('?');
+                    if (!qs) return;
+                    const params = new URLSearchParams(qs);
+                    emp = params.get('emp');
+                    type = params.get('type');
+                    req = params.get('req');
+                }
 
                 if (emp) {
                     const sel = document.getElementById('gen-emp-id');
