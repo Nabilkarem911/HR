@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageModuleMap = {
             'dashboard': 'dashboard',
             'companies': 'companies',
+            'organization': 'organization',
             'employee-profile': 'employees',
             'time-attendance': 'attendance',
             'leaves-loans': 'requests',
@@ -277,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const sidebarMap = {
                         'dashboard': 'dashboard',
                         'companies': 'companies',
+                        'organization': 'organization',
                         'employee-profile': 'employees',
                         'time-attendance': 'attendance',
                         'leaves-loans': 'requests',

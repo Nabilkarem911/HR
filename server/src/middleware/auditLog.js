@@ -12,6 +12,7 @@ const MODULE_NAMES = {
   users: 'المستخدمين',
   attendance: 'الحضور',
   settings: 'الإعدادات',
+  organization: 'الهيكل التنظيمي',
 };
 
 const ACTION_NAMES = {

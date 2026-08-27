@@ -11,6 +11,7 @@ const DEFAULT_PERMISSIONS = {
     assets: { view: true, add: true, edit: true, delete: true },
     vehicles: { view: true, add: true, edit: true, delete: true },
     users: { view: true, add: true, edit: true, delete: true },
+    organization: { view: true, add: true, edit: true, delete: true },
   },
   hr_manager: {
     dashboard: { view: true },
@@ -24,6 +25,7 @@ const DEFAULT_PERMISSIONS = {
     assets: { view: true, add: true, edit: true, delete: false },
     vehicles: { view: true, add: true, edit: true, delete: false },
     users: { view: true, add: false, edit: false, delete: false },
+    organization: { view: true, add: true, edit: true, delete: false },
   },
   branch_manager: {
     dashboard: { view: true },
@@ -37,6 +39,7 @@ const DEFAULT_PERMISSIONS = {
     assets: { view: true, add: false, edit: false, delete: false },
     vehicles: { view: true, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
+    organization: { view: true, add: false, edit: false, delete: false },
   },
   viewer: {
     dashboard: { view: true },
@@ -50,6 +53,7 @@ const DEFAULT_PERMISSIONS = {
     assets: { view: true, add: false, edit: false, delete: false },
     vehicles: { view: true, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
+    organization: { view: true, add: false, edit: false, delete: false },
   },
   employee: {
     dashboard: { view: false },
@@ -63,6 +67,7 @@ const DEFAULT_PERMISSIONS = {
     assets: { view: false, add: false, edit: false, delete: false },
     vehicles: { view: false, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
+    organization: { view: false, add: false, edit: false, delete: false },
   },
 };
 

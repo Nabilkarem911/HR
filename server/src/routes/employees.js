@@ -34,7 +34,7 @@ async function getList(req, res, next) {
       where.push(`company_id = $${idx}`); params.push(req.user.company_id); idx++;
     }
 
-    const sql = `SELECT e.*, c.name as company_name FROM employees e LEFT JOIN companies c ON e.company_id = c.id WHERE ${where.join(' AND ')} ORDER BY e.created_at DESC`;
+    const sql = `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id WHERE ${where.join(' AND ')} ORDER BY e.created_at DESC`;
     const { page, limit, offset } = paginate(req);
     const countRow = await queryOne(`SELECT COUNT(*) as count FROM employees e WHERE ${where.join(' AND ')}`, params);
     const rows = await queryAll(`${sql} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, limit, offset]);
@@ -54,7 +54,7 @@ async function getList(req, res, next) {
 router.get('/:id', async (req, res, next) => {
   try {
     const emp = await queryOne(
-      `SELECT e.*, c.name as company_name FROM employees e LEFT JOIN companies c ON e.company_id = c.id WHERE e.id = $1 AND e.deleted_at IS NULL`,
+      `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id WHERE e.id = $1 AND e.deleted_at IS NULL`,
       [req.params.id]
     );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
@@ -88,9 +88,9 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
     const empCode = buildEmpCode(buildingNumber, empNumber);
     const email = b.email && b.email.trim() ? b.email.trim() : null;
     const row = await queryOne(
-      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
-      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null]
+      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, b.branch_id || null, b.department_id || null, b.job_position_id || null]
     );
     res.status(201).json({ data: row });
   } catch (err) {
@@ -105,7 +105,7 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
 router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
-    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at'];
+    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at', 'branch_id', 'department_id', 'job_position_id'];
     const sets = [];
     const params = [];
     let idx = 1;

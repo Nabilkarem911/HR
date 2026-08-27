@@ -1,0 +1,623 @@
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <i class="fa-solid fa-sitemap text-indigo-500"></i>
+                الهيكل التنظيمي
+            </h2>
+            <p class="text-slate-500 mt-1">إدارة الفروع والأقسام والمسميات الوظيفية وربطها بالموظفين.</p>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <button onclick="openBranchModal()" id="btn-add-branch"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-plus ml-1"></i> إضافة فرع
+            </button>
+            <button onclick="openDeptModal()" id="btn-add-dept"
+                class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-plus ml-1"></i> إضافة قسم
+            </button>
+            <button onclick="openPositionModal()" id="btn-add-position"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-plus ml-1"></i> إضافة مسمى وظيفي
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="flex border-b border-slate-100">
+            <button onclick="switchTab('branches')" id="tab-branches"
+                class="px-6 py-3 font-bold text-sm border-b-2 border-indigo-500 text-indigo-600 bg-indigo-50/50 transition-colors">
+                <i class="fa-solid fa-code-branch ml-1"></i> الفروع
+            </button>
+            <button onclick="switchTab('departments')" id="tab-departments"
+                class="px-6 py-3 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                <i class="fa-solid fa-folder-tree ml-1"></i> الأقسام
+            </button>
+            <button onclick="switchTab('positions')" id="tab-positions"
+                class="px-6 py-3 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition-colors">
+                <i class="fa-solid fa-id-badge ml-1"></i> المسميات الوظيفية
+            </button>
+        </div>
+
+        <!-- Branches Tab -->
+        <div id="tab-content-branches" class="p-4">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="p-4">اسم الفرع</th>
+                            <th class="p-4">الرمز</th>
+                            <th class="p-4">المنشأة</th>
+                            <th class="p-4">العنوان</th>
+                            <th class="p-4">الهاتف</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="branches-tbody" class="divide-y divide-slate-50">
+                        <tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Departments Tab -->
+        <div id="tab-content-departments" class="p-4 hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="p-4">اسم القسم</th>
+                            <th class="p-4">الرمز</th>
+                            <th class="p-4">المنشأة</th>
+                            <th class="p-4">الفرع</th>
+                            <th class="p-4">القسم الأب</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="departments-tbody" class="divide-y divide-slate-50">
+                        <tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Positions Tab -->
+        <div id="tab-content-positions" class="p-4 hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="p-4">المسمى الوظيفي</th>
+                            <th class="p-4">الرمز</th>
+                            <th class="p-4">الدرجة</th>
+                            <th class="p-4">المنشأة</th>
+                            <th class="p-4">القسم</th>
+                            <th class="p-4 text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positions-tbody" class="divide-y divide-slate-50">
+                        <tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Branch Modal -->
+<div id="branch-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 id="branch-modal-title" class="font-bold text-lg text-slate-800">إضافة فرع</h3>
+            <button onclick="closeBranchModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <form id="branch-form" class="p-5 overflow-y-auto flex-1">
+            <input type="hidden" id="branch-id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">المنشأة *</label>
+                <select id="branch-company" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                    <option value="">اختر المنشأة</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">اسم الفرع *</label>
+                <input type="text" id="branch-name" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الرمز</label>
+                <input type="text" id="branch-code" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">العنوان</label>
+                <input type="text" id="branch-address" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الهاتف</label>
+                <input type="text" id="branch-phone" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors font-medium">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Department Modal -->
+<div id="dept-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 id="dept-modal-title" class="font-bold text-lg text-slate-800">إضافة قسم</h3>
+            <button onclick="closeDeptModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <form id="dept-form" class="p-5 overflow-y-auto flex-1">
+            <input type="hidden" id="dept-id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">المنشأة *</label>
+                <select id="dept-company" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500" onchange="updateDeptBranchOptions(); updateDeptParentOptions()">
+                    <option value="">اختر المنشأة</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الفرع</label>
+                <select id="dept-branch" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500">
+                    <option value="">— بدون فرع —</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">القسم الأب</label>
+                <select id="dept-parent" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500">
+                    <option value="">— قسم رئيسي —</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">اسم القسم *</label>
+                <input type="text" id="dept-name" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الرمز</label>
+                <input type="text" id="dept-code" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500">
+            </div>
+            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors font-medium">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Position Modal -->
+<div id="position-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 id="position-modal-title" class="font-bold text-lg text-slate-800">إضافة مسمى وظيفي</h3>
+            <button onclick="closePositionModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-times text-lg"></i>
+            </button>
+        </div>
+        <form id="position-form" class="p-5 overflow-y-auto flex-1">
+            <input type="hidden" id="position-id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">المنشأة *</label>
+                <select id="position-company" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500" onchange="updatePositionDeptOptions()">
+                    <option value="">اختر المنشأة</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">القسم</label>
+                <select id="position-dept" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500">
+                    <option value="">— بدون قسم —</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">المسمى الوظيفي *</label>
+                <input type="text" id="position-title" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الرمز</label>
+                <input type="text" id="position-code" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الدرجة</label>
+                <input type="text" id="position-grade" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-1">الوصف</label>
+                <textarea id="position-description" rows="2" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors font-medium">حفظ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// ── Organization Page Logic ──
+let orgCompanies = [];
+let orgBranches = [];
+let orgDepartments = [];
+let orgPositions = [];
+
+// ── Permission helpers ──
+function canAddOrg() { return window.hasPerm && window.hasPerm('organization', 'add'); }
+function canEditOrg() { return window.hasPerm && window.hasPerm('organization', 'edit'); }
+function canDeleteOrg() { return window.hasPerm && window.hasPerm('organization', 'delete'); }
+
+function applyOrgPermissions() {
+    const addBranch = document.getElementById('btn-add-branch');
+    const addDept = document.getElementById('btn-add-dept');
+    const addPos = document.getElementById('btn-add-position');
+    if (!canAddOrg()) {
+        if (addBranch) addBranch.style.display = 'none';
+        if (addDept) addDept.style.display = 'none';
+        if (addPos) addPos.style.display = 'none';
+    }
+}
+
+// ── Tab switching ──
+function switchTab(tab) {
+    const tabs = ['branches', 'departments', 'positions'];
+    tabs.forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        const tabBtn = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+            content.classList.remove('hidden');
+            tabBtn.classList.add('border-indigo-500', 'text-indigo-600', 'bg-indigo-50/50');
+            tabBtn.classList.remove('border-transparent', 'text-slate-500');
+        } else {
+            content.classList.add('hidden');
+            tabBtn.classList.remove('border-indigo-500', 'text-indigo-600', 'bg-indigo-50/50');
+            tabBtn.classList.add('border-transparent', 'text-slate-500');
+        }
+    });
+}
+
+// ── Load companies for dropdowns ──
+async function loadOrgCompanies() {
+    const { data, error } = await window.db.from('companies').select('*');
+    if (error) { console.error('Failed to load companies', error); return; }
+    orgCompanies = data || [];
+    populateCompanyDropdowns();
+}
+
+function populateCompanyDropdowns() {
+    const dropdowns = ['branch-company', 'dept-company', 'position-company'];
+    dropdowns.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">اختر المنشأة</option>';
+        orgCompanies.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            sel.appendChild(opt);
+        });
+        sel.value = currentVal;
+    });
+}
+
+// ── Load branches ──
+async function loadBranches() {
+    const tbody = document.getElementById('branches-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
+    const { data, error } = await apiRequest('GET', '/organization/branches');
+    if (error) { tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">${error.message}</td></tr>`; return; }
+    orgBranches = data || [];
+    renderBranches();
+}
+
+function renderBranches() {
+    const tbody = document.getElementById('branches-tbody');
+    if (!orgBranches || orgBranches.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400">لا توجد فروع بعد</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orgBranches.map(b => `
+        <tr class="hover:bg-slate-50">
+            <td class="p-4 font-medium text-slate-800">${escapeHtml(b.name)}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(b.code || '—')}</td>
+            <td class="p-4 text-slate-600">${escapeHtml(b.company_name || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(b.address || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(b.phone || '—')}</td>
+            <td class="p-4 text-center">
+                ${canEditOrg() ? `<button onclick="editBranch('${b.id}')" class="text-sky-600 hover:text-sky-800 ml-2"><i class="fa-solid fa-pen"></i></button>` : ''}
+                ${canDeleteOrg() ? `<button onclick="deleteBranch('${b.id}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ── Branch modal ──
+function openBranchModal() {
+    document.getElementById('branch-modal').classList.remove('hidden');
+    document.getElementById('branch-modal').classList.add('flex');
+    document.getElementById('branch-modal-title').textContent = 'إضافة فرع';
+    document.getElementById('branch-form').reset();
+    document.getElementById('branch-id').value = '';
+}
+function closeBranchModal() {
+    document.getElementById('branch-modal').classList.add('hidden');
+    document.getElementById('branch-modal').classList.remove('flex');
+}
+function editBranch(id) {
+    const b = orgBranches.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('branch-modal').classList.remove('hidden');
+    document.getElementById('branch-modal').classList.add('flex');
+    document.getElementById('branch-modal-title').textContent = 'تعديل فرع';
+    document.getElementById('branch-id').value = b.id;
+    document.getElementById('branch-company').value = b.company_id;
+    document.getElementById('branch-name').value = b.name;
+    document.getElementById('branch-code').value = b.code || '';
+    document.getElementById('branch-address').value = b.address || '';
+    document.getElementById('branch-phone').value = b.phone || '';
+}
+async function deleteBranch(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا الفرع؟')) return;
+    const { error } = await apiRequest('DELETE', `/organization/branches/${id}`);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    await loadBranches();
+}
+document.getElementById('branch-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('branch-id').value;
+    const payload = {
+        name: document.getElementById('branch-name').value,
+        code: document.getElementById('branch-code').value || null,
+        address: document.getElementById('branch-address').value || null,
+        phone: document.getElementById('branch-phone').value || null,
+        company_id: document.getElementById('branch-company').value,
+    };
+    if (!payload.company_id) { alert('المنشأة مطلوبة'); return; }
+    const method = id ? 'PUT' : 'POST';
+    const path = id ? `/organization/branches/${id}` : '/organization/branches';
+    const { error } = await apiRequest(method, path, payload);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    closeBranchModal();
+    await loadBranches();
+});
+
+// ── Load departments ──
+async function loadDepartments() {
+    const tbody = document.getElementById('departments-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
+    const { data, error } = await apiRequest('GET', '/organization/departments');
+    if (error) { tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">${error.message}</td></tr>`; return; }
+    orgDepartments = data || [];
+    renderDepartments();
+}
+function renderDepartments() {
+    const tbody = document.getElementById('departments-tbody');
+    if (!orgDepartments || orgDepartments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400">لا توجد أقسام بعد</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orgDepartments.map(d => `
+        <tr class="hover:bg-slate-50">
+            <td class="p-4 font-medium text-slate-800">${escapeHtml(d.name)}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(d.code || '—')}</td>
+            <td class="p-4 text-slate-600">${escapeHtml(d.company_name || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(d.branch_name || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(d.parent_name || '—')}</td>
+            <td class="p-4 text-center">
+                ${canEditOrg() ? `<button onclick="editDept('${d.id}')" class="text-sky-600 hover:text-sky-800 ml-2"><i class="fa-solid fa-pen"></i></button>` : ''}
+                ${canDeleteOrg() ? `<button onclick="deleteDept('${d.id}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ── Department modal ──
+function openDeptModal() {
+    document.getElementById('dept-modal').classList.remove('hidden');
+    document.getElementById('dept-modal').classList.add('flex');
+    document.getElementById('dept-modal-title').textContent = 'إضافة قسم';
+    document.getElementById('dept-form').reset();
+    document.getElementById('dept-id').value = '';
+    updateDeptBranchOptions();
+    updateDeptParentOptions();
+}
+function closeDeptModal() {
+    document.getElementById('dept-modal').classList.add('hidden');
+    document.getElementById('dept-modal').classList.remove('flex');
+}
+function editDept(id) {
+    const d = orgDepartments.find(x => x.id === id);
+    if (!d) return;
+    document.getElementById('dept-modal').classList.remove('hidden');
+    document.getElementById('dept-modal').classList.add('flex');
+    document.getElementById('dept-modal-title').textContent = 'تعديل قسم';
+    document.getElementById('dept-id').value = d.id;
+    document.getElementById('dept-company').value = d.company_id;
+    updateDeptBranchOptions();
+    updateDeptParentOptions();
+    document.getElementById('dept-branch').value = d.branch_id || '';
+    document.getElementById('dept-parent').value = d.parent_id || '';
+    document.getElementById('dept-name').value = d.name;
+    document.getElementById('dept-code').value = d.code || '';
+}
+async function deleteDept(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
+    const { error } = await apiRequest('DELETE', `/organization/departments/${id}`);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    await loadDepartments();
+}
+function updateDeptBranchOptions() {
+    const sel = document.getElementById('dept-branch');
+    const companyId = document.getElementById('dept-company').value;
+    sel.innerHTML = '<option value="">— بدون فرع —</option>';
+    orgBranches.filter(b => !companyId || b.company_id === companyId).forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.name;
+        sel.appendChild(opt);
+    });
+}
+function updateDeptParentOptions() {
+    const sel = document.getElementById('dept-parent');
+    const companyId = document.getElementById('dept-company').value;
+    const currentId = document.getElementById('dept-id').value;
+    sel.innerHTML = '<option value="">— قسم رئيسي —</option>';
+    orgDepartments.filter(d => (!companyId || d.company_id === companyId) && d.id !== currentId).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.name;
+        sel.appendChild(opt);
+    });
+}
+document.getElementById('dept-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('dept-id').value;
+    const payload = {
+        name: document.getElementById('dept-name').value,
+        code: document.getElementById('dept-code').value || null,
+        company_id: document.getElementById('dept-company').value,
+        branch_id: document.getElementById('dept-branch').value || null,
+        parent_id: document.getElementById('dept-parent').value || null,
+    };
+    if (!payload.company_id) { alert('المنشأة مطلوبة'); return; }
+    const method = id ? 'PUT' : 'POST';
+    const path = id ? `/organization/departments/${id}` : '/organization/departments';
+    const { error } = await apiRequest(method, path, payload);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    closeDeptModal();
+    await loadDepartments();
+});
+
+// ── Load positions ──
+async function loadPositions() {
+    const tbody = document.getElementById('positions-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i></td></tr>';
+    const { data, error } = await apiRequest('GET', '/organization/job-positions');
+    if (error) { tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">${error.message}</td></tr>`; return; }
+    orgPositions = data || [];
+    renderPositions();
+}
+function renderPositions() {
+    const tbody = document.getElementById('positions-tbody');
+    if (!orgPositions || orgPositions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400">لا توجد مسميات وظيفية بعد</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orgPositions.map(p => `
+        <tr class="hover:bg-slate-50">
+            <td class="p-4 font-medium text-slate-800">${escapeHtml(p.title)}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(p.code || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(p.grade || '—')}</td>
+            <td class="p-4 text-slate-600">${escapeHtml(p.company_name || '—')}</td>
+            <td class="p-4 text-slate-500">${escapeHtml(p.department_name || '—')}</td>
+            <td class="p-4 text-center">
+                ${canEditOrg() ? `<button onclick="editPosition('${p.id}')" class="text-sky-600 hover:text-sky-800 ml-2"><i class="fa-solid fa-pen"></i></button>` : ''}
+                ${canDeleteOrg() ? `<button onclick="deletePosition('${p.id}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// ── Position modal ──
+function openPositionModal() {
+    document.getElementById('position-modal').classList.remove('hidden');
+    document.getElementById('position-modal').classList.add('flex');
+    document.getElementById('position-modal-title').textContent = 'إضافة مسمى وظيفي';
+    document.getElementById('position-form').reset();
+    document.getElementById('position-id').value = '';
+    updatePositionDeptOptions();
+}
+function closePositionModal() {
+    document.getElementById('position-modal').classList.add('hidden');
+    document.getElementById('position-modal').classList.remove('flex');
+}
+function editPosition(id) {
+    const p = orgPositions.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('position-modal').classList.remove('hidden');
+    document.getElementById('position-modal').classList.add('flex');
+    document.getElementById('position-modal-title').textContent = 'تعديل مسمى وظيفي';
+    document.getElementById('position-id').value = p.id;
+    document.getElementById('position-company').value = p.company_id;
+    updatePositionDeptOptions();
+    document.getElementById('position-dept').value = p.department_id || '';
+    document.getElementById('position-title').value = p.title;
+    document.getElementById('position-code').value = p.code || '';
+    document.getElementById('position-grade').value = p.grade || '';
+    document.getElementById('position-description').value = p.description || '';
+}
+async function deletePosition(id) {
+    if (!confirm('هل أنت متأكد من حذف هذا المسمى الوظيفي؟')) return;
+    const { error } = await apiRequest('DELETE', `/organization/job-positions/${id}`);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    await loadPositions();
+}
+function updatePositionDeptOptions() {
+    const sel = document.getElementById('position-dept');
+    const companyId = document.getElementById('position-company').value;
+    sel.innerHTML = '<option value="">— بدون قسم —</option>';
+    orgDepartments.filter(d => !companyId || d.company_id === companyId).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.id;
+        opt.textContent = d.name;
+        sel.appendChild(opt);
+    });
+}
+document.getElementById('position-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('position-id').value;
+    const payload = {
+        title: document.getElementById('position-title').value,
+        code: document.getElementById('position-code').value || null,
+        grade: document.getElementById('position-grade').value || null,
+        description: document.getElementById('position-description').value || null,
+        company_id: document.getElementById('position-company').value,
+        department_id: document.getElementById('position-dept').value || null,
+    };
+    if (!payload.company_id) { alert('المنشأة مطلوبة'); return; }
+    const method = id ? 'PUT' : 'POST';
+    const path = id ? `/organization/job-positions/${id}` : '/organization/job-positions';
+    const { error } = await apiRequest(method, path, payload);
+    if (error) { alert('خطأ: ' + error.message); return; }
+    closePositionModal();
+    await loadPositions();
+});
+
+// ── HTML escape helper ──
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ── Direct API helper (bypasses apiClient table alias resolution) ──
+async function apiRequest(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = localStorage.getItem('hr_auth_token');
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+        const res = await fetch(`${window.API_BASE_URL}${path}`, {
+            method, headers,
+            body: body ? JSON.stringify(body) : undefined,
+            cache: 'no-store',
+        });
+        const text = await res.text();
+        let json = null;
+        try { json = JSON.parse(text); } catch (_) {}
+        if (!res.ok) return { data: null, error: { message: json?.error || text || `HTTP ${res.status}` } };
+        return { data: json?.data || json, error: null };
+    } catch (err) {
+        return { data: null, error: { message: err.message } };
+    }
+}
+
+// ── Init ──
+(async () => {
+    applyOrgPermissions();
+    await loadOrgCompanies();
+    await loadBranches();
+    await loadDepartments();
+    await loadPositions();
+})();
+</script>

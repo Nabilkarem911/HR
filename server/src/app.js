@@ -24,6 +24,7 @@ const usersRoutes = require('./routes/users');
 const attendanceRoutes = require('./routes/attendance');
 const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settings');
+const organizationRoutes = require('./routes/organization');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -72,6 +73,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/organization', organizationRoutes);
 
 // ── Serve Frontend Static Files ──
 const frontendPath = path.join(__dirname, '..', 'public');

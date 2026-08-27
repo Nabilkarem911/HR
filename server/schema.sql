@@ -260,6 +260,74 @@ CREATE TABLE IF NOT EXISTS system_settings (
 );
 
 -- ─────────────────────────────────────────────
+-- 14. branches (company-level physical locations)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS branches (
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id   UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    name         TEXT NOT NULL,
+    code         TEXT,
+    address      TEXT,
+    phone        TEXT,
+    deleted_at   TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_branches_company_id ON branches(company_id);
+CREATE INDEX IF NOT EXISTS idx_branches_deleted_at ON branches(deleted_at);
+
+-- ─────────────────────────────────────────────
+-- 15. departments (logical units, optionally under a branch, with optional parent for hierarchy)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS departments (
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id   UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    branch_id    UUID REFERENCES branches(id) ON DELETE SET NULL,
+    parent_id    UUID REFERENCES departments(id) ON DELETE SET NULL,
+    name         TEXT NOT NULL,
+    code         TEXT,
+    deleted_at   TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_departments_company_id ON departments(company_id);
+CREATE INDEX IF NOT EXISTS idx_departments_branch_id ON departments(branch_id);
+CREATE INDEX IF NOT EXISTS idx_departments_parent_id ON departments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_departments_deleted_at ON departments(deleted_at);
+
+-- ─────────────────────────────────────────────
+-- 16. job_positions (titles/roles, optionally under a department)
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS job_positions (
+    id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id    UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+    title         TEXT NOT NULL,
+    code          TEXT,
+    grade         TEXT,
+    description   TEXT,
+    deleted_at    TIMESTAMPTZ,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_job_positions_company_id ON job_positions(company_id);
+CREATE INDEX IF NOT EXISTS idx_job_positions_department_id ON job_positions(department_id);
+CREATE INDEX IF NOT EXISTS idx_job_positions_deleted_at ON job_positions(deleted_at);
+
+-- ─────────────────────────────────────────────
+-- 17. Link employees to org structure (additive nullable columns)
+--     Existing position/job_title text fields remain as fallback.
+-- ─────────────────────────────────────────────
+ALTER TABLE employees
+    ADD COLUMN IF NOT EXISTS branch_id        UUID REFERENCES branches(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS department_id    UUID REFERENCES departments(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS job_position_id  UUID REFERENCES job_positions(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_employees_branch_id ON employees(branch_id);
+CREATE INDEX IF NOT EXISTS idx_employees_department_id ON employees(department_id);
+CREATE INDEX IF NOT EXISTS idx_employees_job_position_id ON employees(job_position_id);
+
+-- ─────────────────────────────────────────────
 -- Auto-update trigger for updated_at
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -278,7 +346,8 @@ BEGIN
             'companies', 'employees', 'system_users', 'employee_documents',
             'employee_assets', 'employee_requests', 'issued_letters',
             'monthly_attendance', 'vehicles', 'vehicle_documents',
-            'system_settings', 'payroll_records'
+            'system_settings', 'payroll_records', 'branches', 'departments',
+            'job_positions'
         ])
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_%s_updated_at ON %s', t, t);
