@@ -556,6 +556,16 @@
                 else if (letterType === 'إشعار استقطاع') { docTitleEl.innerText = 'إشعار استقطاع والتزام'; docTitleEl.style.color = '#c2410c'; }
 
                 mainBodyEl.innerHTML = renderLetterTemplate(emp, companyName, letterType, displaySalary);
+                try {
+                    await window.db.from('issued_letters').insert([{
+                        employee_id: empId,
+                        letter_type: letterType,
+                        reference_number: refNo,
+                        content_snapshot: finalEditedHtml
+                    }]);
+                } catch (e) {
+                    console.error('Failed to archive letter', e);
+                }
                 printNativePDF(document.getElementById('print-template').innerHTML);
                 await fetchArchive();
             } catch (error) {

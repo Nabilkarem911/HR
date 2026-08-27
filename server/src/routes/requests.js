@@ -59,6 +59,18 @@ router.post('/', rbacMiddleware('requests', 'add'), auditLog('requests'), async 
 // ── PUT /api/requests/:id (approve/reject/process) ──
 router.put('/:id', rbacMiddleware('requests', 'edit'), auditLog('requests'), async (req, res, next) => {
   try {
+    // Company ownership: non-super users may only act on requests of their own company
+    if (req.user.role !== 'super_admin') {
+      if (!requireCompanyScope(req, res)) return;
+      const target = await queryOne(
+        `SELECT r.id, e.company_id FROM employee_requests r LEFT JOIN employees e ON r.employee_id = e.id WHERE r.id = $1`,
+        [req.params.id]
+      );
+      if (!target) return res.status(404).json({ error: 'Request not found' });
+      if (target.company_id !== req.user.company_id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
     const b = req.body;
     const row = await queryOne(
       `UPDATE employee_requests

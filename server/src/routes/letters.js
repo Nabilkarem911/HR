@@ -74,7 +74,7 @@ router.post('/', rbacMiddleware('letters', 'add'), auditLog('letters'), async (r
   try {
     const b = req.body;
     if (req.user.role !== 'super_admin' && !(await assertEmployeeAccess(req, res, b.employee_id))) return;
-    const refNo = 'LTR-' + Date.now().toString().slice(-8);
+    const refNo = b.reference_number || ('LTR-' + Date.now().toString().slice(-8));
     const row = await queryOne(
       `INSERT INTO issued_letters (employee_id, letter_type, reference_number, ref_no, content_snapshot) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
       [b.employee_id, b.letter_type, refNo, refNo, b.content_snapshot || null]
@@ -87,10 +87,14 @@ router.post('/', rbacMiddleware('letters', 'add'), auditLog('letters'), async (r
 router.get('/:id', async (req, res, next) => {
   try {
     if (!requireCompanyScope(req, res)) return;
-    const scopeClause = req.user.role === 'super_admin' ? '' : ' AND e.company_id = $2';
+    let scopeClause = req.user.role === 'super_admin' ? '' : ' AND e.company_id = $2';
     const params = req.user.role === 'super_admin'
       ? [req.params.id]
       : [req.params.id, req.user.company_id];
+    if (req.user.role === 'employee' && req.user.employee_profile_id) {
+      scopeClause += ` AND l.employee_id = $${params.length + 1}`;
+      params.push(req.user.employee_profile_id);
+    }
     const row = await queryOne(
       `SELECT l.*, e.first_name, e.last_name, e.job_title, e.position, e.hire_date, e.join_date, e.basic_salary, e.contract_salary, e.company_id, c.name as company_name
        FROM issued_letters l LEFT JOIN employees e ON l.employee_id = e.id LEFT JOIN companies c ON e.company_id = c.id
@@ -98,6 +102,11 @@ router.get('/:id', async (req, res, next) => {
       params
     );
     if (!row) return res.status(404).json({ error: 'Letter not found' });
+    // Salary masking: honor hide_salary like the rest of the app (frontend already masks)
+    if (req.user.hasPerm && req.user.hasPerm('employees', 'hide_salary')) {
+      row.basic_salary = null;
+      row.contract_salary = null;
+    }
     res.json({ data: row });
   } catch (err) { next(err); }
 });
