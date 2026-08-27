@@ -6,6 +6,14 @@ const { auditLog } = require('../middleware/auditLog');
 
 const router = express.Router();
 
+function requireCompanyScope(req, res) {
+  if (req.user.role !== 'super_admin' && !req.user.company_id) {
+    res.status(403).json({ error: 'Company scope is required' });
+    return false;
+  }
+  return true;
+}
+
 // ── GET /api/requests ──
 router.get('/', async (req, res, next) => {
   try {
