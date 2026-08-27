@@ -321,11 +321,13 @@ CREATE INDEX IF NOT EXISTS idx_job_positions_deleted_at ON job_positions(deleted
 ALTER TABLE employees
     ADD COLUMN IF NOT EXISTS branch_id        UUID REFERENCES branches(id) ON DELETE SET NULL,
     ADD COLUMN IF NOT EXISTS department_id    UUID REFERENCES departments(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS job_position_id  UUID REFERENCES job_positions(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS job_position_id  UUID REFERENCES job_positions(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS manager_id       UUID REFERENCES employees(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_employees_branch_id ON employees(branch_id);
 CREATE INDEX IF NOT EXISTS idx_employees_department_id ON employees(department_id);
 CREATE INDEX IF NOT EXISTS idx_employees_job_position_id ON employees(job_position_id);
+CREATE INDEX IF NOT EXISTS idx_employees_manager_id ON employees(manager_id);
 
 -- ─────────────────────────────────────────────
 -- Auto-update trigger for updated_at

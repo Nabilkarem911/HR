@@ -32,6 +32,46 @@ async function validateOrgReferences(companyId, branchId, departmentId, jobPosit
   return null;
 }
 
+// ── Manager reference validation: prevent self-ref, cross-company, and circular chains ──
+async function validateManagerReference(employeeId, managerId, companyId) {
+  if (!managerId) return null;
+
+  // Self-reference
+  if (employeeId && managerId === employeeId) {
+    return 'Employee cannot be their own manager';
+  }
+
+  // Manager exists and belongs to same company
+  const manager = await queryOne('SELECT company_id, deleted_at FROM employees WHERE id = $1', [managerId]);
+  if (!manager) return 'Manager not found';
+  if (manager.deleted_at) return 'Manager is archived';
+  if (companyId && manager.company_id !== companyId) {
+    return 'Manager must belong to the same company';
+  }
+
+  // Circular chain detection: walk up the manager chain from the proposed manager
+  // If we reach the employee being updated, it's a cycle.
+  if (employeeId) {
+    let current = managerId;
+    const visited = new Set([employeeId]);
+    let depth = 0;
+    const MAX_DEPTH = 50; // safety limit
+
+    while (current && depth < MAX_DEPTH) {
+      if (visited.has(current)) {
+        return 'Circular reporting chain detected';
+      }
+      visited.add(current);
+      const row = await queryOne('SELECT manager_id FROM employees WHERE id = $1', [current]);
+      if (!row) break;
+      current = row.manager_id;
+      depth++;
+    }
+  }
+
+  return null;
+}
+
 // ── GET /api/employees (list with filters) ──
 router.get('/', async (req, res, next) => {
   if (!req.user.hasPerm('employees', 'view')) {
@@ -59,7 +99,7 @@ async function getList(req, res, next) {
       where.push(`company_id = $${idx}`); params.push(req.user.company_id); idx++;
     }
 
-    const sql = `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id WHERE ${where.join(' AND ')} ORDER BY e.created_at DESC`;
+    const sql = `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title, m.first_name as manager_first_name, m.last_name as manager_last_name FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id LEFT JOIN employees m ON e.manager_id = m.id WHERE ${where.join(' AND ')} ORDER BY e.created_at DESC`;
     const { page, limit, offset } = paginate(req);
     const countRow = await queryOne(`SELECT COUNT(*) as count FROM employees e WHERE ${where.join(' AND ')}`, params);
     const rows = await queryAll(`${sql} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`, [...params, limit, offset]);
@@ -79,7 +119,7 @@ async function getList(req, res, next) {
 router.get('/:id', async (req, res, next) => {
   try {
     const emp = await queryOne(
-      `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id WHERE e.id = $1 AND e.deleted_at IS NULL`,
+      `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title, m.first_name as manager_first_name, m.last_name as manager_last_name FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id LEFT JOIN employees m ON e.manager_id = m.id WHERE e.id = $1 AND e.deleted_at IS NULL`,
       [req.params.id]
     );
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
@@ -117,10 +157,14 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
     const orgError = await validateOrgReferences(b.company_id || null, b.branch_id || null, b.department_id || null, b.job_position_id || null);
     if (orgError) return res.status(400).json({ error: orgError });
 
+    // Validate manager reference (self-ref, cross-company, circular chain)
+    const managerError = await validateManagerReference(null, b.manager_id || null, b.company_id || null);
+    if (managerError) return res.status(400).json({ error: managerError });
+
     const row = await queryOne(
-      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
-      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, b.branch_id || null, b.department_id || null, b.job_position_id || null]
+      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id, manager_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
+      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, b.branch_id || null, b.department_id || null, b.job_position_id || null, b.manager_id || null]
     );
     res.status(201).json({ data: row });
   } catch (err) {
@@ -135,7 +179,7 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
 router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
-    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at', 'branch_id', 'department_id', 'job_position_id'];
+    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at', 'branch_id', 'department_id', 'job_position_id', 'manager_id'];
     const sets = [];
     const params = [];
     let idx = 1;
@@ -184,6 +228,18 @@ router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), a
         b.job_position_id !== undefined ? (b.job_position_id || null) : null
       );
       if (orgError) return res.status(400).json({ error: orgError });
+    }
+
+    // Validate manager reference (self-ref, cross-company, circular chain)
+    if (b.manager_id !== undefined) {
+      let effectiveCompanyId = b.company_id || null;
+      if (!effectiveCompanyId) {
+        const existing = await queryOne('SELECT company_id FROM employees WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
+        if (!existing) return res.status(404).json({ error: 'Employee not found' });
+        effectiveCompanyId = existing.company_id;
+      }
+      const managerError = await validateManagerReference(req.params.id, b.manager_id || null, effectiveCompanyId);
+      if (managerError) return res.status(400).json({ error: managerError });
     }
 
     params.push(req.params.id);

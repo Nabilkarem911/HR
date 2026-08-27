@@ -34,15 +34,15 @@
 | P2 — major product improvement | 26 |
 | P3 — UX/performance improvement | 9 |
 | P4 — nice-to-have | 3 |
-| NOT STARTED | 64 |
+| NOT STARTED | 63 |
 | IN PROGRESS | 0 |
 | BLOCKED | 4 |
 | VERIFYING | 4 |
-| COMPLETE | 5 |
+| COMPLETE | 6 |
 
-- **Current phase:** Phase 2 — Organization Structure & Employee 360 (ORG-001 implemented, pending Production verification)
-- **Current task:** ORG-001 — Organization Structure (VERIFYING — isolated runtime PASS, pending Production deploy + verification)
-- **Next task:** ORG-002 — Employee reporting relationships (P2, NOT STARTED — depends on ORG-001 Production verification)
+- **Current phase:** Phase 2 — Organization Structure & Employee 360 (ORG-001 COMPLETE, ORG-002 implemented pending Production verification)
+- **Current task:** ORG-002 — Employee Reporting Relationships (VERIFYING — isolated runtime PASS, pending Production deploy + verification)
+- **Next task:** ORG-003 — Company transfer rules and effective dates (P2, NOT STARTED — depends on ORG-002 Production verification)
 - **Primary blockers:** ESS still retains `plain_password` dependency (SEC-004); `app.js` runs migrations automatically on startup with no release gate (FND-004); migration runner is not transactional per migration (DB-001); canonical isolated test DB not yet evidenced (FND-005); restore drill not yet demonstrated (DB-003 VERIFYING).
 
 ## Control Rules
@@ -123,7 +123,8 @@ There are 9 migrations. The runner creates `schema_migrations`, sorts SQL files,
 | Authentication | **EXISTS / IMPROVEMENT** | Unified admin/ESS login, JWT, bcrypt for admin path, phone/email lookup; ESS still supports `plain_password`; stateless 7-day tokens. |
 | Users & RBAC | **EXISTS / IMPROVEMENT** | Five roles, default matrix, custom permission merge, route middleware; several GET routes rely on frontend or inline checks. |
 | Companies | **EXISTS / IMPROVEMENT** | CRUD, building number, logo URL, soft archive, company employee view, static ownership hardening. |
-| Organization Structure | **EXISTS / IMPROVEMENT** | Branches, departments (with hierarchy), job positions, employee org links; backend `/api/organization` with CRUD + tree; frontend `pages/organization.html`; RBAC `organization` module. Implemented ORG-001, pending Production verification. |
+| Organization Structure | **EXISTS / IMPROVEMENT** | Branches, departments (with hierarchy), job positions, employee org links; backend `/api/organization` with CRUD + tree; frontend `pages/organization.html`; RBAC `organization` module. ORG-001 COMPLETE (Production verified). |
+| Reporting Relationships | **EXISTS / IMPROVEMENT** | Employee `manager_id` self-referential FK; self-ref/cross-company/circular chain validation; reporting-tree, subordinates, managers endpoints; frontend manager dropdown in employee modal + 360 view. ORG-002 implemented, pending Production verification. |
 | Employees | **EXISTS / IMPROVEMENT** | CRUD, search, status, salary masking, soft delete, company association, employee code generation. |
 | Employee Profile / Employee 360 | **PARTIAL** | Profile page, modal 360 view, linked assets/requests/letters; no authoritative consolidated read model, timeline, or history. |
 | Employee Self Service (ESS) | **PARTIAL / IMPROVEMENT** | ESS profile, requests, letters, salary certificate; identity/session flow is separate and credential storage needs hardening. |
@@ -191,8 +192,8 @@ Organization Structure is added before Employee 360 because company/branch/depar
 
 | ID | Priority | Current | Scope / files | DB / migration | Security / API / UI | Verification / rollback | Acceptance | Status |
 |---|---|---|---|---|---|---|---|---|
-| ORG-001 | P1 | Implemented + isolated runtime verified; pending Production verification | Define departments, branches, job positions, and company hierarchy without replacing `companies` | Migration `009_org_structure.sql` (additive: 3 new tables + 3 nullable columns on employees) | Tenant boundaries and role scope enforced via `organization` RBAC module | Isolated test DB (Docker postgres:15-alpine, port 55433): 23/23 runtime tests PASS; cross-company parent rejected; self-ref cycle rejected; viewer/employee RBAC enforced; employee org links verified in GET/list | Organization tree is explicit and every employee has a valid organizational path | VERIFYING |
-| ORG-002 | P2 | No reporting relationship model | Add employee manager/reporting relationships and position assignments | Additive nullable relationships first | Prevent cycles and cross-company managers | Graph validation and backfill dry run | Reporting graph is acyclic, scoped, and historically explainable | NOT STARTED |
+| ORG-001 | P1 | Complete — Production verified at commit 0c6a068 | Define departments, branches, job positions, and company hierarchy without replacing `companies` | Migration `009_org_structure.sql` (additive: 3 new tables + 3 nullable columns on employees) | Tenant boundaries and role scope enforced via `organization` RBAC module | Isolated test DB 23/23 PASS; Production 16/16 focused verification PASS; cross-company org reference fix deployed | Organization tree is explicit and every employee has a valid organizational path | COMPLETE |
+| ORG-002 | P2 | Implemented + isolated runtime verified; pending Production verification | Add employee manager/reporting relationships and position assignments | Migration `010_employee_reporting.sql` (additive: `manager_id` nullable self-referential FK on employees + index) | Self-reference, cross-company manager, and circular chain detection enforced; reporting-tree and subordinates endpoints added | Isolated test DB (Docker postgres:15-alpine, port 55435): 14/14 runtime tests PASS; self-ref rejected; cross-company rejected; circular chain rejected; archived manager rejected; reporting-tree/subordinates/managers endpoints verified; existing employee update behavior preserved | Reporting graph is acyclic, scoped, and historically explainable | VERIFYING |
 | ORG-003 | P2 | Company transfers are implicit | Define branch/company transfer rules and effective dates | Additive history only if required | Transfer cannot bypass company authorization | State transition and rollback tests | Transfer preserves old ownership/history and updates future scope predictably | NOT STARTED |
 | EMP360-001 | P1 | 360 modal exists | Unified profile contract for personal/employment data, salary, attendance, leaves, loans, payroll, documents, letters, requests, assets, vehicles, compliance, timeline, and alerts | Prefer read-model/query first | One authorized employee-centered contract | API snapshot and isolation tests | Profile loads all permitted domains without client fan-out explosion | NOT STARTED |
 | EMP360-002 | P2 | Linked records shown separately | Add timeline, alerts, status/history composition | Optional history table later | Preserve field-level salary masking | Fixture regression; feature can be disabled | Employee timeline explains important events and pending risks | NOT STARTED |
@@ -437,6 +438,8 @@ Do not push/deploy a release that changes application/database behavior until al
 - The repository currently contains no canonical test runner; isolated runtime verification must not use Production data.
 - 2026-08-27: Production deployment verified at commit `1d0fa32`. Container healthy, health 200, migrations 8/8 applied, backup verified, Dokploy separation verified, PostgreSQL volume verified. Final Production Regression 84/84 PASS. SEC-001/SEC-002/SEC-003 marked COMPLETE. FND-003 and OPS-001 marked COMPLETE. DB-003 moved to VERIFYING (backup verified, restore drill pending). FND-005 moved to VERIFYING (84/84 regression suite exists, isolated test DB pending).
 - 2026-08-27: ORG-001 implemented. Migration `009_org_structure.sql` (additive: `branches`, `departments`, `job_positions` tables + `branch_id`, `department_id`, `job_position_id` nullable columns on `employees`). Backend route `/api/organization` with branches/departments/job-positions CRUD + tree endpoint. RBAC `organization` module added to all roles. Frontend page `pages/organization.html` with 3 tabs. Employee GET/POST/PUT extended with org fields. Isolated runtime: 23/23 tests PASS on Docker postgres:15-alpine (port 55433). Cross-company parent rejected, self-ref cycle rejected, viewer/employee RBAC enforced, soft-delete verified. Status: VERIFYING (pending Production deploy + verification). Files: `server/migrations/009_org_structure.sql`, `server/schema.sql`, `server/src/routes/organization.js`, `server/src/app.js`, `server/src/middleware/rbac.js`, `server/src/middleware/auditLog.js`, `server/src/routes/employees.js`, `pages/organization.html`, `index.html`, `assets/js/app.js`.
+- 2026-08-27: ORG-001 Production verified at commit `0c6a068`. 16/16 focused Production verification PASS. Cross-company org reference fix deployed (commit `0c6a068`). ORG-001 marked COMPLETE.
+- 2026-08-27: ORG-002 implemented. Migration `010_employee_reporting.sql` (additive: `manager_id` nullable self-referential FK on `employees` + index). Employee POST/PUT extended with `manager_id` + `validateManagerReference()` (self-ref, cross-company, circular chain detection with depth limit 50). GET list/detail extended with `manager_first_name`/`manager_last_name`. New endpoints: `GET /api/organization/reporting-tree`, `GET /api/organization/subordinates/:employeeId` (direct + recursive all), `GET /api/organization/managers` (for dropdown). Frontend: manager dropdown in employee modal (company-scoped, excludes self on edit), manager display in 360 view. Isolated runtime: 14/14 tests PASS on Docker postgres:15-alpine (port 55435). Status: VERIFYING (pending Production deploy + verification). Files: `server/migrations/010_employee_reporting.sql`, `server/schema.sql`, `server/src/routes/employees.js`, `server/src/routes/organization.js`, `pages/employee-profile.html`.
 
 ## Enterprise Product Completion Checklist
 

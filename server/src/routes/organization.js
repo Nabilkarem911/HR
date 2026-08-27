@@ -371,4 +371,131 @@ router.delete('/job-positions/:id', rbacMiddleware('organization', 'delete'), au
   } catch (err) { next(err); }
 });
 
+// ═══════════════════════════════════════════════
+// EMPLOYEE REPORTING RELATIONSHIPS (ORG-002)
+// ═══════════════════════════════════════════════
+
+// ── GET /api/organization/reporting-tree ──
+// Returns a hierarchical tree of employees by manager_id, scoped to company.
+router.get('/reporting-tree', async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+    const { company_id } = req.query;
+
+    let sql = `SELECT e.id, e.first_name, e.last_name, e.emp_code, e.manager_id, e.company_id, e.job_title, e.position, j.title as job_position_title, d.name as department_name FROM employees e LEFT JOIN job_positions j ON e.job_position_id = j.id LEFT JOIN departments d ON e.department_id = d.id WHERE e.deleted_at IS NULL`;
+    const params = [];
+    let idx = 1;
+
+    if (req.user.role !== 'super_admin' && req.user.company_id) {
+      sql += ` AND e.company_id = $${idx}`;
+      params.push(req.user.company_id);
+      idx++;
+    } else if (company_id) {
+      sql += ` AND e.company_id = $${idx}`;
+      params.push(company_id);
+      idx++;
+    }
+
+    sql += ` ORDER BY e.first_name ASC`;
+    const employees = await queryAll(sql, params);
+
+    // Build tree
+    const empMap = new Map();
+    for (const e of employees) {
+      e.subordinates = [];
+      empMap.set(e.id, e);
+    }
+
+    const roots = [];
+    for (const e of employees) {
+      if (e.manager_id && empMap.has(e.manager_id)) {
+        empMap.get(e.manager_id).subordinates.push(e);
+      } else {
+        roots.push(e);
+      }
+    }
+
+    res.json({ data: roots, total: employees.length });
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/organization/subordinates/:employeeId ──
+// Returns direct (and optionally all) subordinates of a given employee.
+router.get('/subordinates/:employeeId', async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+
+    // Verify the employee exists and user has access
+    const emp = await queryOne(`SELECT id, company_id FROM employees WHERE id = $1 AND deleted_at IS NULL`, [req.params.employeeId]);
+    if (!emp) return res.status(404).json({ error: 'Employee not found' });
+    if (req.user.role !== 'super_admin' && req.user.company_id && emp.company_id !== req.user.company_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { depth } = req.query;
+    const includeAll = depth === 'all';
+
+    if (includeAll) {
+      // Recursive: all descendants using recursive CTE
+      const rows = await queryAll(
+        `WITH RECURSIVE subords AS (
+          SELECT e.id, e.first_name, e.last_name, e.emp_code, e.manager_id, e.company_id, e.job_title, e.position, 1 as level
+          FROM employees e WHERE e.manager_id = $1 AND e.deleted_at IS NULL
+          UNION ALL
+          SELECT e.id, e.first_name, e.last_name, e.emp_code, e.manager_id, e.company_id, e.job_title, e.position, s.level + 1
+          FROM employees e
+          INNER JOIN subords s ON e.manager_id = s.id
+          WHERE e.deleted_at IS NULL
+        )
+        SELECT * FROM subords ORDER BY level, first_name`,
+        [req.params.employeeId]
+      );
+      res.json({ data: rows, total: rows.length });
+    } else {
+      // Direct subordinates only
+      const rows = await queryAll(
+        `SELECT e.id, e.first_name, e.last_name, e.emp_code, e.manager_id, e.company_id, e.job_title, e.position, j.title as job_position_title
+         FROM employees e LEFT JOIN job_positions j ON e.job_position_id = j.id
+         WHERE e.manager_id = $1 AND e.deleted_at IS NULL ORDER BY e.first_name`,
+        [req.params.employeeId]
+      );
+      res.json({ data: rows, total: rows.length });
+    }
+  } catch (err) { next(err); }
+});
+
+// ── GET /api/organization/managers ──
+// Returns list of employees who can be managers (active employees in a company).
+// Used to populate manager dropdown in employee form.
+router.get('/managers', async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+    const { company_id, exclude } = req.query;
+
+    let sql = `SELECT e.id, e.first_name, e.last_name, e.emp_code, e.company_id, e.job_title, e.position, j.title as job_position_title FROM employees e LEFT JOIN job_positions j ON e.job_position_id = j.id WHERE e.deleted_at IS NULL AND e.status = 'active'`;
+    const params = [];
+    let idx = 1;
+
+    if (req.user.role !== 'super_admin' && req.user.company_id) {
+      sql += ` AND e.company_id = $${idx}`;
+      params.push(req.user.company_id);
+      idx++;
+    } else if (company_id) {
+      sql += ` AND e.company_id = $${idx}`;
+      params.push(company_id);
+      idx++;
+    }
+
+    if (exclude) {
+      sql += ` AND e.id != $${idx}`;
+      params.push(exclude);
+      idx++;
+    }
+
+    sql += ` ORDER BY e.first_name, e.last_name ASC`;
+    const rows = await queryAll(sql, params);
+    res.json({ data: rows });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
