@@ -469,7 +469,7 @@
     var companiesData = [];
 
     // Open/Close Modal Functions (Attached to window to prevent scope errors)
-    window.openEmployeeModal = function (isEdit = false, employee = null) {
+    window.openEmployeeModal = async function (isEdit = false, employee = null) {
         if (modal.parentNode !== document.body) document.body.appendChild(modal);
         modal.classList.remove('hidden');
         modal.classList.add('flex');

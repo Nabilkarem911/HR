@@ -612,6 +612,24 @@ async function apiRequest(method, path, body) {
     }
 }
 
+// ── Export functions to window for onclick handlers (SPA IIFE scoping fix) ──
+window.switchTab = switchTab;
+window.openBranchModal = openBranchModal;
+window.closeBranchModal = closeBranchModal;
+window.editBranch = editBranch;
+window.deleteBranch = deleteBranch;
+window.openDeptModal = openDeptModal;
+window.closeDeptModal = closeDeptModal;
+window.editDept = editDept;
+window.deleteDept = deleteDept;
+window.updateDeptBranchOptions = updateDeptBranchOptions;
+window.updateDeptParentOptions = updateDeptParentOptions;
+window.openPositionModal = openPositionModal;
+window.closePositionModal = closePositionModal;
+window.editPosition = editPosition;
+window.deletePosition = deletePosition;
+window.updatePositionDeptOptions = updatePositionDeptOptions;
+
 // ── Init ──
 (async () => {
     applyOrgPermissions();
