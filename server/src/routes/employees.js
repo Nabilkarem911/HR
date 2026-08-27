@@ -7,6 +7,31 @@ const { auditLog } = require('../middleware/auditLog');
 
 const router = express.Router();
 
+// ── Org reference validation: ensure branch/department/position belong to the employee's company ──
+async function validateOrgReferences(companyId, branchId, departmentId, jobPositionId) {
+  if (!companyId) return null;
+
+  if (branchId) {
+    const branch = await queryOne('SELECT company_id FROM branches WHERE id = $1 AND deleted_at IS NULL', [branchId]);
+    if (!branch) return 'Branch not found';
+    if (branch.company_id !== companyId) return 'Branch must belong to the same company';
+  }
+
+  if (departmentId) {
+    const dept = await queryOne('SELECT company_id FROM departments WHERE id = $1 AND deleted_at IS NULL', [departmentId]);
+    if (!dept) return 'Department not found';
+    if (dept.company_id !== companyId) return 'Department must belong to the same company';
+  }
+
+  if (jobPositionId) {
+    const pos = await queryOne('SELECT company_id FROM job_positions WHERE id = $1 AND deleted_at IS NULL', [jobPositionId]);
+    if (!pos) return 'Job position not found';
+    if (pos.company_id !== companyId) return 'Job position must belong to the same company';
+  }
+
+  return null;
+}
+
 // ── GET /api/employees (list with filters) ──
 router.get('/', async (req, res, next) => {
   if (!req.user.hasPerm('employees', 'view')) {
@@ -87,6 +112,11 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
     }
     const empCode = buildEmpCode(buildingNumber, empNumber);
     const email = b.email && b.email.trim() ? b.email.trim() : null;
+
+    // Validate org references belong to the employee's company
+    const orgError = await validateOrgReferences(b.company_id || null, b.branch_id || null, b.department_id || null, b.job_position_id || null);
+    if (orgError) return res.status(400).json({ error: orgError });
+
     const row = await queryOne(
       `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
@@ -137,6 +167,23 @@ router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), a
       if (!emp) return res.status(404).json({ error: 'Employee not found' });
       sets.push(`emp_code = $${idx++}`);
       params.push(buildEmpCode(company.building_number, emp.emp_number));
+    }
+
+    // Validate org references belong to the employee's company
+    if (b.branch_id !== undefined || b.department_id !== undefined || b.job_position_id !== undefined) {
+      let effectiveCompanyId = b.company_id || null;
+      if (!effectiveCompanyId) {
+        const existing = await queryOne('SELECT company_id FROM employees WHERE id = $1 AND deleted_at IS NULL', [req.params.id]);
+        if (!existing) return res.status(404).json({ error: 'Employee not found' });
+        effectiveCompanyId = existing.company_id;
+      }
+      const orgError = await validateOrgReferences(
+        effectiveCompanyId,
+        b.branch_id !== undefined ? (b.branch_id || null) : null,
+        b.department_id !== undefined ? (b.department_id || null) : null,
+        b.job_position_id !== undefined ? (b.job_position_id || null) : null
+      );
+      if (orgError) return res.status(400).json({ error: orgError });
     }
 
     params.push(req.params.id);
