@@ -1,7 +1,16 @@
 const express = require('express');
 const { queryOne, queryAll } = require('../config/db');
+const { rbacMiddleware } = require('../middleware/rbac');
 
 const router = express.Router();
+
+function requireCompanyScope(req, res) {
+  if (req.user.role !== 'super_admin' && !req.user.company_id) {
+    res.status(403).json({ error: 'Company scope is required' });
+    return false;
+  }
+  return true;
+}
 
 // ── GET /api/dashboard/kpis ──
 router.get('/kpis', async (req, res, next) => {
@@ -9,7 +18,7 @@ router.get('/kpis', async (req, res, next) => {
     let companyFilter = '';
     let params = [];
     if (req.user.role !== 'super_admin' && req.user.company_id) {
-      companyFilter = 'WHERE company_id = $1';
+      companyFilter = 'AND company_id = $1';
       params = [req.user.company_id];
     }
 
@@ -59,9 +68,12 @@ router.get('/compliance-radar', async (req, res, next) => {
 });
 
 // ── GET /api/dashboard/audit-logs ──
-router.get('/audit-logs', async (req, res, next) => {
+router.get('/audit-logs', rbacMiddleware('users', 'view'), async (req, res, next) => {
   try {
-    const rows = await queryAll(`SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 50`);
+    if (!requireCompanyScope(req, res)) return;
+    const scopeClause = req.user.role === 'super_admin' ? '' : ' WHERE company_id = $1';
+    const params = req.user.role === 'super_admin' ? [] : [req.user.company_id];
+    const rows = await queryAll(`SELECT * FROM audit_logs${scopeClause} ORDER BY created_at DESC LIMIT 50`, params);
     res.json({ data: rows });
   } catch (err) { next(err); }
 });

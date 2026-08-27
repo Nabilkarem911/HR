@@ -1,10 +1,11 @@
 const express = require('express');
 const { query, queryOne, queryAll } = require('../config/db');
+const { rbacMiddleware } = require('../middleware/rbac');
 
 const router = express.Router();
 
 // ── GET /api/settings ──
-router.get('/', async (req, res, next) => {
+router.get('/', rbacMiddleware('users', 'view'), async (req, res, next) => {
   try {
     const rows = await queryAll(`SELECT * FROM system_settings ORDER BY setting_key ASC`);
     const result = {};
@@ -14,7 +15,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // ── GET /api/settings/:key ──
-router.get('/:key', async (req, res, next) => {
+router.get('/:key', rbacMiddleware('users', 'view'), async (req, res, next) => {
   try {
     const row = await queryOne(`SELECT * FROM system_settings WHERE setting_key = $1`, [req.params.key]);
     if (!row) return res.status(404).json({ error: 'Setting not found' });

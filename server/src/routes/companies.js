@@ -59,7 +59,7 @@ router.post('/', rbacMiddleware('companies', 'add'), validateBody(['name']), aud
 });
 
 // ── PUT /api/companies/:id ──
-router.put('/:id', rbacMiddleware('companies', 'edit'), auditLog('companies'), async (req, res, next) => {
+router.put('/:id', rbacMiddleware('companies', 'edit'), validateBody(['name']), auditLog('companies'), async (req, res, next) => {
   try {
     const { name, logo_url } = req.body;
     if (req.user.role === 'super_admin') {

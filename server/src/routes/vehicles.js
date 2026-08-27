@@ -1,6 +1,7 @@
 const express = require('express');
 const { query, queryOne, queryAll } = require('../config/db');
 const { rbacMiddleware } = require('../middleware/rbac');
+const { validateBody } = require('../middleware/validate');
 const { paginate } = require('../utils/helpers');
 const { auditLog } = require('../middleware/auditLog');
 
@@ -195,7 +196,7 @@ router.post('/documents', rbacMiddleware('vehicles', 'add'), auditLog('vehicles'
 });
 
 // ── PUT /api/vehicles/documents/:id ──
-router.put('/documents/:id', rbacMiddleware('vehicles', 'edit'), auditLog('vehicles'), async (req, res, next) => {
+router.put('/documents/:id', rbacMiddleware('vehicles', 'edit'), validateBody(['vehicle_id']), auditLog('vehicles'), async (req, res, next) => {
   try {
     if (req.user.role === 'super_admin') {
       const b = req.body;
