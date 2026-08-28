@@ -107,7 +107,7 @@
 </div>
 
 <!-- Branch Modal -->
-<div id="branch-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
+<div id="branch-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="branch-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة فرع</h3>
@@ -147,7 +147,7 @@
 </div>
 
 <!-- Department Modal -->
-<div id="dept-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
+<div id="dept-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="dept-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة قسم</h3>
@@ -191,7 +191,7 @@
 </div>
 
 <!-- Position Modal -->
-<div id="position-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
+<div id="position-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="position-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة مسمى وظيفي</h3>
@@ -335,8 +335,10 @@ function renderBranches() {
 
 // ── Branch modal ──
 function openBranchModal() {
-    document.getElementById('branch-modal').classList.remove('hidden');
-    document.getElementById('branch-modal').classList.add('flex');
+    const modal = document.getElementById('branch-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('branch-modal-title').textContent = 'إضافة فرع';
     document.getElementById('branch-form').reset();
     document.getElementById('branch-id').value = '';
@@ -348,8 +350,10 @@ function closeBranchModal() {
 function editBranch(id) {
     const b = orgBranches.find(x => x.id === id);
     if (!b) return;
-    document.getElementById('branch-modal').classList.remove('hidden');
-    document.getElementById('branch-modal').classList.add('flex');
+    const modal = document.getElementById('branch-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('branch-modal-title').textContent = 'تعديل فرع';
     document.getElementById('branch-id').value = b.id;
     document.getElementById('branch-company').value = b.company_id;
@@ -415,8 +419,10 @@ function renderDepartments() {
 
 // ── Department modal ──
 function openDeptModal() {
-    document.getElementById('dept-modal').classList.remove('hidden');
-    document.getElementById('dept-modal').classList.add('flex');
+    const modal = document.getElementById('dept-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('dept-modal-title').textContent = 'إضافة قسم';
     document.getElementById('dept-form').reset();
     document.getElementById('dept-id').value = '';
@@ -430,8 +436,10 @@ function closeDeptModal() {
 function editDept(id) {
     const d = orgDepartments.find(x => x.id === id);
     if (!d) return;
-    document.getElementById('dept-modal').classList.remove('hidden');
-    document.getElementById('dept-modal').classList.add('flex');
+    const modal = document.getElementById('dept-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('dept-modal-title').textContent = 'تعديل قسم';
     document.getElementById('dept-id').value = d.id;
     document.getElementById('dept-company').value = d.company_id;
@@ -522,8 +530,10 @@ function renderPositions() {
 
 // ── Position modal ──
 function openPositionModal() {
-    document.getElementById('position-modal').classList.remove('hidden');
-    document.getElementById('position-modal').classList.add('flex');
+    const modal = document.getElementById('position-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('position-modal-title').textContent = 'إضافة مسمى وظيفي';
     document.getElementById('position-form').reset();
     document.getElementById('position-id').value = '';
@@ -536,8 +546,10 @@ function closePositionModal() {
 function editPosition(id) {
     const p = orgPositions.find(x => x.id === id);
     if (!p) return;
-    document.getElementById('position-modal').classList.remove('hidden');
-    document.getElementById('position-modal').classList.add('flex');
+    const modal = document.getElementById('position-modal');
+    if (modal.parentNode !== document.body) document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.getElementById('position-modal-title').textContent = 'تعديل مسمى وظيفي';
     document.getElementById('position-id').value = p.id;
     document.getElementById('position-company').value = p.company_id;
