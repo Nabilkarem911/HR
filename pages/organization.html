@@ -107,8 +107,8 @@
 </div>
 
 <!-- Branch Modal -->
-<div id="branch-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
+<div id="branch-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-3 md:p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[85vh] overflow-hidden relative">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="branch-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة فرع</h3>
             <button onclick="closeBranchModal()" class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
@@ -139,16 +139,17 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">الهاتف</label>
                 <input type="text" id="branch-phone" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
             </div>
-            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100 sticky bottom-0 bg-white">
-                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors font-medium">حفظ</button>
-            </div>
         </form>
+        <div class="flex justify-end gap-3 p-4 md:p-5 border-t border-slate-100 bg-white flex-shrink-0">
+            <button type="button" onclick="closeBranchModal()" class="px-5 py-2 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors font-medium">إلغاء</button>
+            <button type="submit" form="branch-form" class="px-5 py-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors font-medium">حفظ</button>
+        </div>
     </div>
 </div>
 
 <!-- Department Modal -->
-<div id="dept-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
+<div id="dept-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-3 md:p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[85vh] overflow-hidden relative">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="dept-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة قسم</h3>
             <button onclick="closeDeptModal()" class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
@@ -183,16 +184,17 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">الرمز</label>
                 <input type="text" id="dept-code" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-sky-500">
             </div>
-            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100 sticky bottom-0 bg-white">
-                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors font-medium">حفظ</button>
-            </div>
         </form>
+        <div class="flex justify-end gap-3 p-4 md:p-5 border-t border-slate-100 bg-white flex-shrink-0">
+            <button type="button" onclick="closeDeptModal()" class="px-5 py-2 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors font-medium">إلغاء</button>
+            <button type="submit" form="dept-form" class="px-5 py-2 rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors font-medium">حفظ</button>
+        </div>
     </div>
 </div>
 
 <!-- Position Modal -->
-<div id="position-modal" class="fixed top-16 inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-3 md:p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[90vh] overflow-hidden">
+<div id="position-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden items-center justify-center p-3 md:p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto flex flex-col max-h-[85vh] overflow-hidden relative">
         <div class="flex justify-between items-center p-4 md:p-5 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
             <h3 id="position-modal-title" class="font-bold text-base md:text-lg text-slate-800">إضافة مسمى وظيفي</h3>
             <button onclick="closePositionModal()" class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
@@ -229,10 +231,11 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">الوصف</label>
                 <textarea id="position-description" rows="2" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500"></textarea>
             </div>
-            <div class="mt-4 flex justify-end gap-3 pt-5 border-t border-slate-100 sticky bottom-0 bg-white">
-                <button type="submit" class="px-5 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors font-medium">حفظ</button>
-            </div>
         </form>
+        <div class="flex justify-end gap-3 p-4 md:p-5 border-t border-slate-100 bg-white flex-shrink-0">
+            <button type="button" onclick="closePositionModal()" class="px-5 py-2 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors font-medium">إلغاء</button>
+            <button type="submit" form="position-form" class="px-5 py-2 rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors font-medium">حفظ</button>
+        </div>
     </div>
 </div>
 
@@ -641,6 +644,16 @@ window.closePositionModal = closePositionModal;
 window.editPosition = editPosition;
 window.deletePosition = deletePosition;
 window.updatePositionDeptOptions = updatePositionDeptOptions;
+
+// ── Click-outside-to-close for modal overlays ──
+['branch-modal', 'dept-modal', 'position-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('click', (e) => {
+            if (e.target === el) el.classList.add('hidden'), el.classList.remove('flex');
+        });
+    }
+});
 
 // ── Init ──
 (async () => {
