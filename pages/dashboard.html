@@ -215,6 +215,22 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Upcoming Invoices -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice-dollar text-amber-500"></i> فواتير قريبة الاستحقاق
+                    </h3>
+                    <a href="#invoices" class="text-xs font-bold text-amber-600 hover:text-amber-800">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
+                </div>
+                <div id="upcoming-invoices-list" class="divide-y divide-slate-50">
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i>
+                        <span class="text-sm">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -233,7 +249,8 @@
             fetchKPIPayroll(),
             fetchKPIBranches(),
             fetchComplianceAndRadar(),
-            fetchAuditLogPreview()
+            fetchAuditLogPreview(),
+            fetchUpcomingInvoices()
         ]);
     }
 
@@ -562,6 +579,65 @@
         }
     }
 
+    // Upcoming Invoices Card — shows invoices approaching due date
+    async function fetchUpcomingInvoices() {
+        const listEl = document.getElementById('upcoming-invoices-list');
+        if (!listEl || !window.db) return;
+
+        try {
+            // Fetch active invoices sorted by next_due_date
+            const { data, error } = await window.db.apiRequest('GET', '/invoices?status=active');
+            if (error) throw error;
+
+            const rows = (data || []).filter(inv => {
+                if (!inv.next_due_date) return false;
+                const dueDate = new Date(inv.next_due_date);
+                const diffDays = Math.ceil((dueDate - new Date()) / (1000 * 60 * 60 * 24));
+                return diffDays <= 30; // Show invoices due within 30 days
+            }).sort((a, b) => new Date(a.next_due_date) - new Date(b.next_due_date)).slice(0, 10);
+
+            if (!rows.length) {
+                listEl.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 text-2xl mb-2 block"></i><span class="text-sm">لا توجد فواتير قريبة الاستحقاق</span></div>`;
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            listEl.innerHTML = rows.map(inv => {
+                const dueDate = new Date(inv.next_due_date);
+                const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                const amount = Number(inv.amount || 0).toLocaleString();
+                const title = inv.title || 'فاتورة';
+
+                let badgeClass = 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                let timeText = `باقي ${diffDays} يوم`;
+                if (diffDays <= 0) {
+                    badgeClass = 'bg-rose-50 text-rose-600 border-rose-200';
+                    timeText = 'مستحقة اليوم';
+                } else if (diffDays <= 2) {
+                    badgeClass = 'bg-amber-50 text-amber-600 border-amber-200';
+                }
+
+                return `
+                    <a href="#invoices" class="flex items-center gap-3 p-3 hover:bg-slate-50 transition-colors group">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-800 text-sm truncate">${title}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">${amount} ر.س — ${inv.next_due_date}</p>
+                        </div>
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${badgeClass} whitespace-nowrap">${timeText}</span>
+                    </a>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Upcoming invoices error:', e.message);
+            listEl.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-triangle-exclamation text-amber-400 text-2xl mb-2 block"></i><span class="text-sm">تعذر تحميل الفواتير</span></div>`;
+        }
+    }
+
     document.getElementById('master-company-filter')?.addEventListener('change', () => {
         // Re-trigger parallel loads
         Promise.all([
@@ -569,7 +645,8 @@
             fetchKPIPayroll(),
             fetchKPIBranches(),
             fetchComplianceAndRadar(),
-            fetchAuditLogPreview()
+            fetchAuditLogPreview(),
+            fetchUpcomingInvoices()
         ]);
     });
 

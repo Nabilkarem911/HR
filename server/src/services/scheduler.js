@@ -45,20 +45,27 @@ function addCycleMonths(date, cycle) {
   return d.toISOString().split('T')[0];
 }
 
-// ── 1. Generate payment records for invoices whose next_due_date has arrived ──
+// ── 1. Generate payment records for invoices whose next_due_date has arrived or is approaching ──
 async function generateDuePayments() {
   const today = new Date().toISOString().split('T')[0];
+  // Create payments for invoices due within 2 days (to enable pre-due reminders)
+  const lookaheadDate = new Date();
+  lookaheadDate.setDate(lookaheadDate.getDate() + 2);
+  const lookahead = lookaheadDate.toISOString().split('T')[0];
 
-  // Find active invoices where next_due_date <= today and no payment exists for that date
+  // Find active invoices where next_due_date <= today + 2 days and no payment exists for that date
   const dueInvoices = await queryAll(
     `SELECT id, company_id, title, amount, cycle, next_due_date
      FROM invoices
      WHERE status = 'active'
        AND next_due_date <= $1
-       AND (end_date IS NULL OR end_date >= $1)
+       AND (end_date IS NULL OR end_date >= $2)
      ORDER BY next_due_date ASC`,
-    [today]
+    [lookahead, today]
   );
+
+  console.log(`[scheduler] generateDuePayments: today=${today}, lookahead=${lookahead}, found=${dueInvoices.length} invoices`);
+  dueInvoices.forEach(inv => console.log(`  - ${inv.title}: next_due=${inv.next_due_date}`));
 
   let generated = 0;
   for (const inv of dueInvoices) {
@@ -68,22 +75,27 @@ async function generateDuePayments() {
       [inv.id, inv.next_due_date]
     );
     if (existing) {
-      // Payment already generated; advance next_due_date
-      const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
-      await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+      // Payment already generated; advance next_due_date only when due date has arrived
+      if (inv.next_due_date <= today) {
+        const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
+        await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+      }
       continue;
     }
 
+    const isDue = inv.next_due_date <= today;
     const cycleLabel = buildCycleLabel(inv.next_due_date, inv.cycle);
     await query(
       `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
-       VALUES ($1, $2, $3, $4, $5, 'due')`,
-      [inv.id, inv.company_id, cycleLabel, inv.next_due_date, inv.amount || 0]
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [inv.id, inv.company_id, cycleLabel, inv.next_due_date, inv.amount || 0, isDue ? 'due' : 'upcoming']
     );
 
-    // Advance next_due_date to next cycle
-    const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
-    await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+    // Only advance next_due_date when the due date has actually arrived
+    if (isDue) {
+      const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
+      await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+    }
     generated++;
   }
 
@@ -122,15 +134,23 @@ async function updatePaymentStatuses() {
 async function sendReminders() {
   const today = new Date().toISOString().split('T')[0];
 
-  // Find payments that need reminders (due or overdue, not yet reminded today)
+  // Find payments that need reminders:
+  // - upcoming payments at 2 days or 1 day before due date
+  // - due payments (due today)
+  // - overdue payments (past due)
   // An invoice has reminder_days_before; we remind when due_date - reminder_days_before <= today
   const paymentsNeedingReminders = await queryAll(
     `SELECT p.id AS payment_id, p.invoice_id, p.cycle_label, p.due_date, p.amount, p.status,
             i.title, i.category, i.provider_name, i.billing_number, i.sadad_number,
-            i.reminder_days_before, i.company_id
+            i.reminder_days_before, i.company_id,
+            (p.due_date - CURRENT_DATE) AS days_remaining
      FROM invoice_payments p
      JOIN invoices i ON p.invoice_id = i.id
-     WHERE p.status IN ('due', 'overdue')
+     WHERE p.status IN ('upcoming', 'due', 'overdue')
+       AND (
+         p.status IN ('due', 'overdue')
+         OR (p.status = 'upcoming' AND (p.due_date - CURRENT_DATE) IN (1, 2))
+       )
        AND p.id NOT IN (
          SELECT payment_id FROM invoice_reminders
          WHERE sent_at::date = $1 AND status = 'sent'
@@ -152,7 +172,8 @@ async function sendReminders() {
 
     if (!recipients.length) continue;
 
-    const statusLabel = p.status === 'overdue' ? 'متأخرة' : 'مستحقة';
+    const daysRemaining = Number(p.days_remaining);
+    const statusLabel = p.status === 'overdue' ? 'متأخرة' : daysRemaining === 0 ? 'مستحقة اليوم' : daysRemaining === 1 ? 'تستحق غداً' : 'تستحق بعد يومين';
     const amountFormatted = Number(p.amount || 0).toLocaleString();
     const dueDateFormatted = new Date(p.due_date).toLocaleDateString('ar-SA');
 
@@ -227,8 +248,11 @@ async function runSchedulerTick() {
 
   try {
     const generated = await generateDuePayments();
+    console.log(`[scheduler] generateDuePayments: ${generated} payments created`);
     const statusUpdates = await updatePaymentStatuses();
+    console.log(`[scheduler] updatePaymentStatuses: due=${statusUpdates.markedDue}, overdue=${statusUpdates.markedOverdue}`);
     const reminders = await sendReminders();
+    console.log(`[scheduler] sendReminders: sent=${reminders.sent}, failed=${reminders.failed}`);
 
     if (generated > 0 || statusUpdates.markedDue > 0 || statusUpdates.markedOverdue > 0 || reminders.sent > 0 || reminders.failed > 0) {
       console.log(`[scheduler] Payments generated: ${generated}, due: ${statusUpdates.markedDue}, overdue: ${statusUpdates.markedOverdue}, reminders sent: ${reminders.sent}, failed: ${reminders.failed}`);
