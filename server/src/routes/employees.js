@@ -162,9 +162,9 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
     if (managerError) return res.status(400).json({ error: managerError });
 
     const row = await queryOne(
-      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id, manager_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`,
-      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, b.branch_id || null, b.department_id || null, b.job_position_id || null, b.manager_id || null]
+      `INSERT INTO employees (emp_code, emp_number, first_name, last_name, email, phone, position, job_title, basic_salary, contract_salary, social_insurance_amount, hire_date, join_date, status, company_id, iqama_number, nationality, iqama_profession, branch_id, department_id, job_position_id, manager_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *`,
+      [empCode, empNumber, b.first_name, b.last_name, email, b.phone || null, b.position || null, b.job_title || null, b.basic_salary || 0, b.contract_salary || null, b.social_insurance_amount || 0, b.hire_date || null, b.hire_date || null, b.status || 'active', b.company_id || null, b.iqama_number || null, b.nationality || null, b.iqama_profession || null, b.branch_id || null, b.department_id || null, b.job_position_id || null, b.manager_id || null]
     );
     res.status(201).json({ data: row });
   } catch (err) {
@@ -179,7 +179,7 @@ router.post('/', rbacMiddleware('employees', 'add'), validateBody(['first_name',
 router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), async (req, res, next) => {
   try {
     const b = req.body;
-    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at', 'branch_id', 'department_id', 'job_position_id', 'manager_id'];
+    const columns = ['first_name', 'last_name', 'email', 'phone', 'position', 'job_title', 'basic_salary', 'contract_salary', 'social_insurance_amount', 'hire_date', 'join_date', 'status', 'company_id', 'iqama_number', 'nationality', 'iqama_profession', 'deleted_at', 'branch_id', 'department_id', 'job_position_id', 'manager_id'];
     const sets = [];
     const params = [];
     let idx = 1;
@@ -189,7 +189,7 @@ router.put('/:id', rbacMiddleware('employees', 'edit'), auditLog('employees'), a
         if (col === 'email') {
           const emailVal = b[col] && b[col].trim ? b[col].trim() : b[col];
           params.push(emailVal || null);
-        } else if (col === 'basic_salary' || col === 'contract_salary') {
+        } else if (col === 'basic_salary' || col === 'contract_salary' || col === 'social_insurance_amount') {
           const num = b[col] === '' ? null : (isNaN(parseFloat(b[col])) ? null : parseFloat(b[col]));
           params.push(num);
         } else {

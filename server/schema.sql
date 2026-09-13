@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS employees (
     job_title         TEXT,
     basic_salary      NUMERIC(12,2) DEFAULT 0,
     contract_salary   NUMERIC(12,2),
+    social_insurance_amount NUMERIC(12,2) DEFAULT 0,
     hire_date         DATE,
     join_date         DATE,
     status            TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','on_leave','terminated')),
