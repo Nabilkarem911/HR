@@ -387,11 +387,12 @@ router.post('/send-test', rbacMiddleware('whatsapp', 'manage'), async (req, res,
     const headers = buildHeaders(config);
     const message = req.body.message || 'رسالة اختبار من نظام Gpack-HR — تم ربط واتساب بنجاح. ✅';
 
-    // Normalize phone
+    // Normalize phone — WAHA expects digits only (or digits@c.us), NOT + prefix
     let normalizedPhone = String(phone).replace(/[\s\-()]/g, '');
-    if (normalizedPhone.startsWith('00')) normalizedPhone = '+' + normalizedPhone.slice(2);
-    if (normalizedPhone.startsWith('0') && normalizedPhone.length > 1) normalizedPhone = '+966' + normalizedPhone.slice(1);
-    if (!normalizedPhone.startsWith('+') && /^\d{9,}$/.test(normalizedPhone)) normalizedPhone = '+966' + normalizedPhone;
+    if (normalizedPhone.startsWith('00')) normalizedPhone = normalizedPhone.slice(2);
+    if (normalizedPhone.startsWith('0') && normalizedPhone.length > 1) normalizedPhone = '966' + normalizedPhone.slice(1);
+    if (normalizedPhone.startsWith('+')) normalizedPhone = normalizedPhone.slice(1);
+    if (!normalizedPhone.includes('@')) normalizedPhone = normalizedPhone + '@c.us';
 
     try {
       // WAHA send endpoint: POST /api/sendText with { chatId, text, session }

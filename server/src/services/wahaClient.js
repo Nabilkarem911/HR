@@ -21,9 +21,10 @@ async function getWahaConfig() {
 function normalizePhone(phone) {
   let cleaned = String(phone || '').replace(/[\s\-()]/g, '');
   if (!cleaned) return null;
-  if (cleaned.startsWith('00')) cleaned = '+' + cleaned.slice(2);
-  if (cleaned.startsWith('0') && cleaned.length > 1) cleaned = '+966' + cleaned.slice(1);
-  if (!cleaned.startsWith('+') && /^\d{9,}$/.test(cleaned)) cleaned = '+966' + cleaned;
+  if (cleaned.startsWith('00')) cleaned = cleaned.slice(2);
+  if (cleaned.startsWith('0') && cleaned.length > 1) cleaned = '966' + cleaned.slice(1);
+  if (cleaned.startsWith('+')) cleaned = cleaned.slice(1);
+  if (!cleaned.includes('@')) cleaned = cleaned + '@c.us';
   return cleaned;
 }
 
