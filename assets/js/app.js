@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         'assets': 'assets',
                         'vehicles': 'vehicles',
                         'invoices': 'invoices',
-                        'whatsapp-settings': 'users',
+                        'whatsapp-settings': 'whatsapp',
                         'users': 'users'
                     };
 

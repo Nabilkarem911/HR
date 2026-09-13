@@ -46,16 +46,18 @@ async function sendWhatsAppMessage(phone, message) {
 
   const session = config.waha_session || 'default';
   const baseUrl = config.waha_api_url.replace(/\/$/, '');
-  const url = `${baseUrl}/api/sessions/${session}/chats/send-text`;
+  // WAHA send endpoint: POST /api/sendText with { chatId, text, session }
+  const url = `${baseUrl}/api/sendText`;
 
   const headers = { 'Content-Type': 'application/json' };
   if (config.waha_api_token) {
-    headers['Authorization'] = `Bearer ${config.waha_api_token}`;
+    headers['X-API-Key'] = config.waha_api_token;
   }
 
   const body = JSON.stringify({
     chatId: normalizedPhone,
     text: message,
+    session: session,
   });
 
   // Use AbortController for timeout (Node 18+ native fetch)

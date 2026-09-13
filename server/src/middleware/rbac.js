@@ -13,6 +13,7 @@ const DEFAULT_PERMISSIONS = {
     users: { view: true, add: true, edit: true, delete: true },
     organization: { view: true, add: true, edit: true, delete: true },
     invoices: { view: true, add: true, edit: true, delete: true, manage_payments: true, manage_recipients: true, send_reminders: true },
+    whatsapp: { view: true, manage: true },
   },
   hr_manager: {
     dashboard: { view: true },
@@ -28,6 +29,7 @@ const DEFAULT_PERMISSIONS = {
     users: { view: true, add: false, edit: false, delete: false },
     organization: { view: true, add: true, edit: true, delete: false },
     invoices: { view: true, add: true, edit: true, delete: false, manage_payments: true, manage_recipients: true, send_reminders: true },
+    whatsapp: { view: true, manage: false },
   },
   branch_manager: {
     dashboard: { view: true },
@@ -43,6 +45,7 @@ const DEFAULT_PERMISSIONS = {
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: true, add: false, edit: false, delete: false },
     invoices: { view: true, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
+    whatsapp: { view: false, manage: false },
   },
   viewer: {
     dashboard: { view: true },
@@ -58,6 +61,7 @@ const DEFAULT_PERMISSIONS = {
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: true, add: false, edit: false, delete: false },
     invoices: { view: true, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
+    whatsapp: { view: false, manage: false },
   },
   employee: {
     dashboard: { view: false },
@@ -73,6 +77,7 @@ const DEFAULT_PERMISSIONS = {
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: false, add: false, edit: false, delete: false },
     invoices: { view: false, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
+    whatsapp: { view: false, manage: false },
   },
 };
 

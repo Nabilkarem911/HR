@@ -47,10 +47,11 @@ function buildBaseUrl(config) {
 }
 
 // ── Helper: build headers with optional auth token ──
+// WAHA uses X-API-Key header (not Authorization Bearer)
 function buildHeaders(config) {
   const headers = { 'Content-Type': 'application/json' };
   if (config.waha_api_token) {
-    headers['Authorization'] = `Bearer ${config.waha_api_token}`;
+    headers['X-API-Key'] = config.waha_api_token;
   }
   return headers;
 }
@@ -81,7 +82,7 @@ function requireSuperAdmin(req, res) {
 // ═══════════════════════════════════════════════════════
 // GET /api/whatsapp/settings — return current WAHA config (token masked)
 // ═══════════════════════════════════════════════════════
-router.get('/settings', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.get('/settings', rbacMiddleware('whatsapp', 'view'), async (req, res, next) => {
   try {
     const config = await loadWahaSettings();
     // Mask the token for security — never expose full token to frontend
@@ -100,7 +101,7 @@ router.get('/settings', rbacMiddleware('users', 'view'), async (req, res, next) 
 // ═══════════════════════════════════════════════════════
 // PUT /api/whatsapp/settings — save WAHA config
 // ═══════════════════════════════════════════════════════
-router.put('/settings', rbacMiddleware('users', 'view'), auditLog('settings'), async (req, res, next) => {
+router.put('/settings', rbacMiddleware('whatsapp', 'manage'), auditLog('settings'), async (req, res, next) => {
   try {
     if (!requireSuperAdmin(req, res)) return;
     const b = req.body;
@@ -139,7 +140,7 @@ router.put('/settings', rbacMiddleware('users', 'view'), auditLog('settings'), a
 // ═══════════════════════════════════════════════════════
 // GET /api/whatsapp/sessions — list all WAHA sessions
 // ═══════════════════════════════════════════════════════
-router.get('/sessions', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.get('/sessions', rbacMiddleware('whatsapp', 'view'), async (req, res, next) => {
   try {
     const config = await loadWahaSettings();
     const baseUrl = buildBaseUrl(config);
@@ -169,7 +170,7 @@ router.get('/sessions', rbacMiddleware('users', 'view'), async (req, res, next) 
 // ═══════════════════════════════════════════════════════
 // POST /api/whatsapp/test — test connection to WAHA server
 // ═══════════════════════════════════════════════════════
-router.post('/test', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.post('/test', rbacMiddleware('whatsapp', 'view'), async (req, res, next) => {
   try {
     const config = await loadWahaSettings();
     const baseUrl = buildBaseUrl(config);
@@ -199,7 +200,7 @@ router.post('/test', rbacMiddleware('users', 'view'), async (req, res, next) => 
 // ═══════════════════════════════════════════════════════
 // GET /api/whatsapp/status — get current session status
 // ═══════════════════════════════════════════════════════
-router.get('/status', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.get('/status', rbacMiddleware('whatsapp', 'view'), async (req, res, next) => {
   try {
     const config = await loadWahaSettings();
     const baseUrl = buildBaseUrl(config);
@@ -244,7 +245,7 @@ router.get('/status', rbacMiddleware('users', 'view'), async (req, res, next) =>
 // ═══════════════════════════════════════════════════════
 // POST /api/whatsapp/session/start — start the WAHA session
 // ═══════════════════════════════════════════════════════
-router.post('/session/start', rbacMiddleware('users', 'view'), auditLog('settings'), async (req, res, next) => {
+router.post('/session/start', rbacMiddleware('whatsapp', 'manage'), auditLog('settings'), async (req, res, next) => {
   try {
     if (!requireSuperAdmin(req, res)) return;
     const config = await loadWahaSettings();
@@ -283,7 +284,7 @@ router.post('/session/start', rbacMiddleware('users', 'view'), auditLog('setting
 // ═══════════════════════════════════════════════════════
 // POST /api/whatsapp/session/stop — stop the WAHA session
 // ═══════════════════════════════════════════════════════
-router.post('/session/stop', rbacMiddleware('users', 'view'), auditLog('settings'), async (req, res, next) => {
+router.post('/session/stop', rbacMiddleware('whatsapp', 'manage'), auditLog('settings'), async (req, res, next) => {
   try {
     if (!requireSuperAdmin(req, res)) return;
     const config = await loadWahaSettings();
@@ -318,7 +319,7 @@ router.post('/session/stop', rbacMiddleware('users', 'view'), auditLog('settings
 // ═══════════════════════════════════════════════════════
 // GET /api/whatsapp/qr — get QR code for linking WhatsApp
 // ═══════════════════════════════════════════════════════
-router.get('/qr', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.get('/qr', rbacMiddleware('whatsapp', 'view'), async (req, res, next) => {
   try {
     const config = await loadWahaSettings();
     const baseUrl = buildBaseUrl(config);
@@ -368,7 +369,7 @@ router.get('/qr', rbacMiddleware('users', 'view'), async (req, res, next) => {
 // ═══════════════════════════════════════════════════════
 // POST /api/whatsapp/send-test — send a test WhatsApp message
 // ═══════════════════════════════════════════════════════
-router.post('/send-test', rbacMiddleware('users', 'view'), async (req, res, next) => {
+router.post('/send-test', rbacMiddleware('whatsapp', 'manage'), async (req, res, next) => {
   try {
     if (!requireSuperAdmin(req, res)) return;
     const config = await loadWahaSettings();
@@ -393,10 +394,11 @@ router.post('/send-test', rbacMiddleware('users', 'view'), async (req, res, next
     if (!normalizedPhone.startsWith('+') && /^\d{9,}$/.test(normalizedPhone)) normalizedPhone = '+966' + normalizedPhone;
 
     try {
-      const resp = await fetchWithTimeout(`${baseUrl}/api/sessions/${session}/chats/send-text`, {
+      // WAHA send endpoint: POST /api/sendText with { chatId, text, session }
+      const resp = await fetchWithTimeout(`${baseUrl}/api/sendText`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ chatId: normalizedPhone, text: message }),
+        body: JSON.stringify({ chatId: normalizedPhone, text: message, session }),
       }, 15000);
 
       if (!resp.ok) {

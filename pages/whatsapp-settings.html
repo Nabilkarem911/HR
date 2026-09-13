@@ -425,7 +425,7 @@
 
     // ── Init page ──
     async function initWhatsappSettings() {
-        if (window.hasPerm && !window.hasPerm('users', 'view')) {
+        if (window.hasPerm && !window.hasPerm('whatsapp', 'view')) {
             return alert('غير مصرح لك بعرض إعدادات واتساب.');
         }
         await loadSettings();
