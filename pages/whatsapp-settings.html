@@ -146,6 +146,8 @@
             if (data) {
                 document.getElementById('waha-url').value = data.waha_api_url || '';
                 document.getElementById('waha-phone').value = data.waha_sender_phone || '';
+                // Store saved session for pre-selection after sessions load
+                window._savedWahaSession = data.waha_session || '';
                 if (data.waha_api_token_set) {
                     document.getElementById('waha-token').placeholder = '•••••••• (محفوظ)';
                     document.getElementById('token-status').innerText = '✓ رمز API محفوظ';
@@ -153,7 +155,6 @@
                 } else {
                     document.getElementById('token-status').innerText = 'لم يتم تعيين رمز API';
                 }
-                // Session dropdown will be populated by loadSessions()
             }
         } catch (err) {
             console.error('Load settings error:', err.message);
@@ -190,9 +191,9 @@
                 return;
             }
 
-            // Populate session dropdown
+            // Populate session dropdown — use saved session or first available
             const sessionSel = document.getElementById('waha-session');
-            const currentSession = sessionSel.value;
+            const savedSession = window._savedWahaSession || '';
             sessionSel.innerHTML = '<option value="">-- اختر الجلسة --</option>';
             sessions.forEach(s => {
                 const opt = document.createElement('option');
@@ -200,8 +201,12 @@
                 opt.innerText = `${s.name} (${s.status || 'unknown'})`;
                 sessionSel.appendChild(opt);
             });
-            // Restore previous selection if it still exists
-            if (currentSession) sessionSel.value = currentSession;
+            // Pre-select the saved session if it exists in the list
+            if (savedSession && sessions.some(s => s.name === savedSession)) {
+                sessionSel.value = savedSession;
+            } else if (sessions.length > 0) {
+                sessionSel.value = sessions[0].name;
+            }
 
             // Render sessions list
             list.innerHTML = sessions.map(s => {
@@ -261,6 +266,8 @@
                 document.getElementById('token-status').innerText = '✓ رمز API محفوظ';
                 document.getElementById('token-status').className = 'text-xs text-emerald-600 mt-1';
             }
+            // Reload sessions with new credentials
+            await loadSessions();
             return true;
         } catch (err) {
             alert('خطأ في الحفظ: ' + (err.message || 'فشل'));
@@ -298,6 +305,8 @@
                 document.getElementById('token-status').innerText = '✓ رمز API محفوظ';
                 document.getElementById('token-status').className = 'text-xs text-emerald-600 mt-1';
             }
+            // Reload sessions with new credentials
+            await loadSessions();
             const { data: testData, error: testError } = await window.db.apiRequest('POST', '/whatsapp/test');
             if (testError) throw testError;
             if (testData.success) {

@@ -3,6 +3,88 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('.nav-link');
     const sidebar = document.getElementById('sidebar');
     const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const modalRoot = document.getElementById('modal-root');
+
+    // ── Global Modal Portal System ──
+    // Tracks which elements were moved to #modal-root for cleanup on navigation
+    let _portedModals = [];
+
+    /**
+     * Move all modal-like elements from the current page into #modal-root.
+     * This removes them from .page-enter (which had transform -> containing block for fixed)
+     * so they position relative to the viewport correctly.
+     */
+    function portPageModals() {
+        if (!modalRoot) return;
+        _portedModals = [];
+        const pageWrapper = mainContent.querySelector('.page-enter');
+        if (!pageWrapper) return;
+
+        // Move direct children that are modal overlays (fixed inset-0 or .modal-overlay + hidden)
+        Array.from(pageWrapper.children).forEach(el => {
+            const isModal = el.id && (
+                (el.classList.contains('fixed') && el.classList.contains('inset-0') && el.classList.contains('hidden')) ||
+                (el.classList.contains('modal-overlay') && el.classList.contains('hidden'))
+            );
+            if (isModal) {
+                modalRoot.appendChild(el);
+                _portedModals.push(el);
+            }
+        });
+    }
+
+    /**
+     * Remove all ported modals (called on navigation away from a page).
+     * Also cleans up any modals that were moved to document.body by legacy page code.
+     */
+    function cleanupPortedModals() {
+        // Remove tracked modals from wherever they currently are
+        _portedModals.forEach(el => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+        });
+        _portedModals = [];
+        // Clear modal root as safety net
+        if (modalRoot) modalRoot.innerHTML = '';
+        // Also remove any orphaned modals that are direct children of body
+        // (moved there by legacy document.body.appendChild calls)
+        document.querySelectorAll('body > .modal-overlay, body > .fixed.inset-0').forEach(el => {
+            el.remove();
+        });
+    }
+
+    // ── Unified Modal Helpers ──
+    window.openModal = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        // Lock body scroll
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeModal = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.classList.add('hidden');
+        // Restore body scroll only if no other modals are open
+        if (!document.querySelector('.modal-overlay:not(.hidden), body > .fixed.inset-0:not(.hidden)')) {
+            document.body.style.overflow = '';
+        }
+    };
+
+    // Close modal on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            // Close topmost visible modal
+            const openModals = document.querySelectorAll('#modal-root > .fixed.inset-0:not(.hidden), #modal-root > .modal-overlay:not(.hidden), body > .fixed.inset-0:not(.hidden), body > .modal-overlay:not(.hidden)');
+            if (openModals.length > 0) {
+                const topModal = openModals[openModals.length - 1];
+                topModal.classList.add('hidden');
+                if (!document.querySelector('.modal-overlay:not(.hidden), body > .fixed.inset-0:not(.hidden)')) {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+    });
 
     // Sidebar Toggle
     toggleSidebarBtn.addEventListener('click', () => {
@@ -144,11 +226,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clean up dynamically injected scripts from the previous page to prevent memory leaks and duplicate execution hooks
             document.querySelectorAll('script.dynamic-view-script').forEach(script => script.remove());
 
+            // Clean up ported modals from previous page
+            cleanupPortedModals();
+
             // Clear completely before injecting new HTML
             mainContent.innerHTML = '';
 
             // Render page content with animation
             mainContent.innerHTML = `<div class="page-enter">${html}</div>`;
+
+            // Move all modal overlays to global modal root (fixes containing block issue)
+            portPageModals();
 
             // Execute scripts inside the injected HTML (Vanilla JS limitation workaround)
             const scripts = mainContent.querySelectorAll('script');

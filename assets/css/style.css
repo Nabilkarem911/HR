@@ -10,18 +10,18 @@
 }
 
 /* Page transition animations */
+/* IMPORTANT: Do NOT use transform here — it creates a containing block for position:fixed descendants,
+   which breaks modals inside .page-enter. Use opacity-only fade. */
 .page-enter {
-    animation: fadeIn 0.4s ease-out forwards;
+    animation: fadeIn 0.35s ease-out forwards;
 }
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(15px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
     }
 }
 
@@ -58,26 +58,30 @@
 /* ����� ���� ��� ��� Popups �� ������� */
 /* ===== Global Modal System (Tailwind-based) ===== */
 /* Ensures modals are centered, scrollable, and above all content */
+/* Uses :not(.hidden) so the Tailwind 'hidden' class still controls visibility */
 .modal-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    padding: 2rem 1rem !important;
-    overflow-y: auto !important;
-    background: rgba(15, 23, 42, 0.6) !important;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    background: rgba(15, 23, 42, 0.6);
+}
+.modal-overlay:not(.hidden) {
+    display: flex;
 }
 
 .modal-overlay > div {
-    margin: auto 0 !important;
-    max-height: none !important;
+    margin: auto 0;
+    max-height: none;
 }
 
 @media (max-height: 700px) {
     .modal-overlay {
-        padding: 0.5rem !important;
+        padding: 0.5rem;
     }
 }
 
