@@ -88,15 +88,15 @@ async function getList(req, res, next) {
     let idx = 1;
 
     if (search) {
-      where.push(`(first_name ILIKE $${idx} OR last_name ILIKE $${idx} OR email ILIKE $${idx} OR emp_code ILIKE $${idx} OR iqama_number ILIKE $${idx})`);
+      where.push(`(e.first_name ILIKE $${idx} OR e.last_name ILIKE $${idx} OR e.email ILIKE $${idx} OR e.emp_code ILIKE $${idx} OR e.iqama_number ILIKE $${idx})`);
       params.push(`%${search}%`);
       idx++;
     }
-    if (status) { where.push(`status = $${idx}`); params.push(status); idx++; }
-    if (company_id) { where.push(`company_id = $${idx}`); params.push(company_id); idx++; }
+    if (status) { where.push(`e.status = $${idx}`); params.push(status); idx++; }
+    if (company_id) { where.push(`e.company_id = $${idx}`); params.push(company_id); idx++; }
 
     if (req.user.role !== 'super_admin' && req.user.company_id) {
-      where.push(`company_id = $${idx}`); params.push(req.user.company_id); idx++;
+      where.push(`e.company_id = $${idx}`); params.push(req.user.company_id); idx++;
     }
 
     const sql = `SELECT e.*, c.name as company_name, b.name as branch_name, d.name as department_name, j.title as job_position_title, m.first_name as manager_first_name, m.last_name as manager_last_name FROM employees e LEFT JOIN companies c ON e.company_id = c.id LEFT JOIN branches b ON e.branch_id = b.id LEFT JOIN departments d ON e.department_id = d.id LEFT JOIN job_positions j ON e.job_position_id = j.id LEFT JOIN employees m ON e.manager_id = m.id WHERE ${where.join(' AND ')} ORDER BY e.created_at DESC`;
