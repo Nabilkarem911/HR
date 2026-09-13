@@ -63,6 +63,85 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── GET /api/invoices/categories (list all active categories) ──
+router.get('/categories', async (req, res, next) => {
+  try {
+    const where = [`c.is_active = true`];
+    const params = [];
+    // Show global categories (company_id IS NULL) + company-specific categories
+    if (req.user.role !== 'super_admin' && req.user.company_id) {
+      where.push(`(c.company_id IS NULL OR c.company_id = $${params.length + 1})`);
+      params.push(req.user.company_id);
+    }
+    const rows = await queryAll(
+      `SELECT c.*, co.name as company_name FROM invoice_categories c
+       LEFT JOIN companies co ON c.company_id = co.id
+       WHERE ${where.join(' AND ')}
+       ORDER BY c.sort_order ASC, c.name ASC`,
+      params
+    );
+    res.json({ data: rows });
+  } catch (err) { next(err); }
+});
+
+// ── POST /api/invoices/categories ──
+router.post('/categories', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+    const b = req.body;
+    if (!b.name) {
+      return res.status(400).json({ error: 'Category name is required' });
+    }
+    const companyId = req.user.role === 'super_admin' ? (b.company_id || null) : req.user.company_id;
+    const row = await queryOne(
+      `INSERT INTO invoice_categories (company_id, name, name_ar, icon, color, sort_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [companyId, b.name, b.name_ar || null, b.icon || 'fa-tag', b.color || 'slate', b.sort_order || 0, b.is_active !== false]
+    );
+    res.status(201).json({ data: row });
+  } catch (err) { next(err); }
+});
+
+// ── PUT /api/invoices/categories/:id ──
+router.put('/categories/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+    const existing = await queryOne(`SELECT * FROM invoice_categories WHERE id = $1`, [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Category not found' });
+    // Global categories (company_id IS NULL) can only be edited by super_admin
+    if (req.user.role !== 'super_admin' && existing.company_id !== req.user.company_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const b = req.body;
+    const row = await queryOne(
+      `UPDATE invoice_categories SET
+        name = COALESCE($1, name),
+        name_ar = COALESCE($2, name_ar),
+        icon = COALESCE($3, icon),
+        color = COALESCE($4, color),
+        sort_order = COALESCE($5, sort_order),
+        is_active = COALESCE($6, is_active)
+       WHERE id = $7 RETURNING *`,
+      [b.name || null, b.name_ar !== undefined ? b.name_ar : null, b.icon || null, b.color || null, b.sort_order !== undefined ? b.sort_order : null, b.is_active !== undefined ? b.is_active : null, req.params.id]
+    );
+    res.json({ data: row });
+  } catch (err) { next(err); }
+});
+
+// ── DELETE /api/invoices/categories/:id ──
+router.delete('/categories/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), async (req, res, next) => {
+  try {
+    if (!requireCompanyScope(req, res)) return;
+    const existing = await queryOne(`SELECT * FROM invoice_categories WHERE id = $1`, [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Category not found' });
+    if (req.user.role !== 'super_admin' && existing.company_id !== req.user.company_id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    await query(`DELETE FROM invoice_categories WHERE id = $1`, [req.params.id]);
+    res.json({ data: { id: req.params.id } });
+  } catch (err) { next(err); }
+});
+
 // ── GET /api/invoices/stats ──
 router.get('/stats', async (req, res, next) => {
   try {

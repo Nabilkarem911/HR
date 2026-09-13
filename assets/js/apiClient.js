@@ -370,6 +370,7 @@ window.db = {
     auth: authApi,
     from,
     rpc,
+    apiRequest, // expose the raw fetch wrapper for custom endpoints
 };
 
 // ── Global Utilities (same as supabaseClient.js) ──

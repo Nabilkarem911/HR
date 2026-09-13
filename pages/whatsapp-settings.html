@@ -33,18 +33,20 @@
             <form id="waha-settings-form" class="p-5 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">رابط خادم WAHA *</label>
-                    <input id="waha-url" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500" placeholder="http://localhost:3000">
-                    <p class="text-xs text-slate-400 mt-1">عنوان خادم WAHA (مثال: http://localhost:3000)</p>
+                    <input id="waha-url" required class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500" placeholder="https://waha.orcanox.xyz">
+                    <p class="text-xs text-slate-400 mt-1">عنوان خادم WAHA (مثال: https://waha.orcanox.xyz)</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">رمز API (اختياري)</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">رمز API</label>
                     <input id="waha-token" type="password" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500" placeholder="••••••••">
                     <p id="token-status" class="text-xs text-slate-400 mt-1">لم يتم تعيين رمز API</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">اسم الجلسة</label>
-                    <input id="waha-session" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500" placeholder="default" value="default">
-                    <p class="text-xs text-slate-400 mt-1">اسم الجلسة في WAHA (افتراضي: default)</p>
+                    <select id="waha-session" class="w-full border border-slate-200 rounded-lg px-4 py-2 focus:outline-none focus:border-emerald-500">
+                        <option value="">-- جاري تحميل الجلسات --</option>
+                    </select>
+                    <p class="text-xs text-slate-400 mt-1">اختر الجلسة النشطة من قائمة الجلسات المتاحة</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">رقم واتساب المُستخدم للإرسال</label>
@@ -62,39 +64,29 @@
             </form>
         </div>
 
-        <!-- QR Code & Session Control -->
+        <!-- Sessions List -->
         <div class="bg-white rounded-xl border border-slate-100 shadow-sm">
             <div class="p-4 border-b border-slate-100 font-bold text-slate-700 flex items-center gap-2">
-                <i class="fa-solid fa-qrcode text-slate-400"></i>
-                ربط رقم واتساب
-            </div>
-            <div class="p-5 space-y-4">
-                <div id="qr-container" class="flex flex-col items-center justify-center min-h-[280px] bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 p-6">
-                    <div id="qr-placeholder" class="text-center">
-                        <i class="fa-solid fa-qrcode text-6xl text-slate-300 mb-4"></i>
-                        <p class="text-slate-400 font-medium">اضغط "بدء الجلسة" ثم "عرض QR" لربط رقم واتساب</p>
-                    </div>
-                    <img id="qr-image" class="hidden max-w-[250px] rounded-lg shadow-sm" alt="WhatsApp QR Code">
-                    <div id="qr-error" class="hidden text-center text-rose-500">
-                        <i class="fa-solid fa-triangle-exclamation text-4xl mb-3"></i>
-                        <p id="qr-error-msg" class="font-medium"></p>
-                    </div>
-                    <div id="qr-loading" class="hidden text-center">
-                        <i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-500 mb-3"></i>
-                        <p class="text-slate-500">جاري تحميل QR code...</p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="startSession()" id="btn-start-session" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold">
-                        <i class="fa-solid fa-play ml-1"></i> بدء الجلسة
-                    </button>
-                    <button onclick="loadQR()" id="btn-load-qr" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-bold">
-                        <i class="fa-solid fa-qrcode ml-1"></i> عرض QR
-                    </button>
-                </div>
-                <button onclick="stopSession()" id="btn-stop-session" class="w-full bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-lg font-bold">
-                    <i class="fa-solid fa-stop ml-1"></i> إيقاف الجلسة
+                <i class="fa-solid fa-list text-slate-400"></i>
+                الجلسات المتاحة
+                <button onclick="loadSessions()" class="text-slate-400 hover:text-slate-600 text-sm mr-auto">
+                    <i class="fa-solid fa-rotate-right"></i>
                 </button>
+            </div>
+            <div class="p-5">
+                <div id="sessions-loading" class="text-center py-8">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-500 mb-3"></i>
+                    <p class="text-slate-400">جاري تحميل الجلسات...</p>
+                </div>
+                <div id="sessions-list" class="hidden space-y-3"></div>
+                <div id="sessions-empty" class="hidden text-center py-8">
+                    <i class="fa-solid fa-plug text-4xl text-slate-300 mb-3"></i>
+                    <p class="text-slate-400">لا توجد جلسات. تأكد من إعداد WAHA أولاً.</p>
+                </div>
+                <div id="sessions-error" class="hidden text-center py-8">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-rose-400 mb-3"></i>
+                    <p id="sessions-error-msg" class="text-rose-500 font-medium"></p>
+                </div>
             </div>
         </div>
     </div>
@@ -123,19 +115,17 @@
         </div>
     </div>
 
-    <!-- Help / Instructions -->
+    <!-- Help -->
     <div class="bg-blue-50 rounded-xl border border-blue-100 p-5">
         <h3 class="font-bold text-blue-800 mb-3 flex items-center gap-2">
             <i class="fa-solid fa-circle-info"></i>
-            دليل الإعداد السريع
+            دليل الإعداد
         </h3>
         <ol class="list-decimal list-inside space-y-2 text-sm text-blue-700">
-            <li>شغّل خادم WAHA محلياً: <code class="bg-blue-100 px-2 py-0.5 rounded">docker run -p 3000:3000 devlikeapro/waha</code></li>
-            <li>أدخل رابط الخادم (عادة <code class="bg-blue-100 px-2 py-0.5 rounded">http://localhost:3000</code>) في الحقل أعلاه</li>
-            <li>اضغط "حفظ واختبار الاتصال" للتأكد من الاتصال بالخادم</li>
-            <li>اضغط "بدء الجلسة" لإنشاء جلسة واتساب جديدة</li>
-            <li>اضغط "عرض QR" وامسح الكود بتطبيق واتساب على هاتفك (إعدادات → الأجهزة المرتبطة)</li>
-            <li>بعد ربط الرقم، ستتغير حالة الاتصال إلى "متصل" — جاهز لإرسال التنبيهات</li>
+            <li>أدخل رابط خادم WAHA (مثال: <code class="bg-blue-100 px-2 py-0.5 rounded">https://waha.orcanox.xyz</code>)</li>
+            <li>أدخل رمز API إذا كان مطلوباً</li>
+            <li>اختر الجلسة النشطة من قائمة الجلسات</li>
+            <li>اضغط "حفظ واختبار الاتصال" للتأكد من الاتصال</li>
             <li>اختبر الإرسال عبر "إرسال رسالة اختبار" بأسفل الصفحة</li>
         </ol>
     </div>
@@ -155,7 +145,6 @@
             if (error) throw error;
             if (data) {
                 document.getElementById('waha-url').value = data.waha_api_url || '';
-                document.getElementById('waha-session').value = data.waha_session || 'default';
                 document.getElementById('waha-phone').value = data.waha_sender_phone || '';
                 if (data.waha_api_token_set) {
                     document.getElementById('waha-token').placeholder = '•••••••• (محفوظ)';
@@ -164,10 +153,85 @@
                 } else {
                     document.getElementById('token-status').innerText = 'لم يتم تعيين رمز API';
                 }
+                // Session dropdown will be populated by loadSessions()
             }
         } catch (err) {
             console.error('Load settings error:', err.message);
         }
+    }
+
+    // ── Load sessions from WAHA ──
+    async function loadSessions() {
+        const loading = document.getElementById('sessions-loading');
+        const list = document.getElementById('sessions-list');
+        const empty = document.getElementById('sessions-empty');
+        const errorDiv = document.getElementById('sessions-error');
+        const errorMsg = document.getElementById('sessions-error-msg');
+
+        loading.classList.remove('hidden');
+        list.classList.add('hidden');
+        empty.classList.add('hidden');
+        errorDiv.classList.add('hidden');
+
+        try {
+            const { data, error } = await window.db.apiRequest('GET', '/whatsapp/sessions');
+            if (error) throw error;
+            loading.classList.add('hidden');
+
+            if (!data.success) {
+                errorMsg.innerText = data.error || 'فشل تحميل الجلسات';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const sessions = data.sessions || [];
+            if (sessions.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            // Populate session dropdown
+            const sessionSel = document.getElementById('waha-session');
+            const currentSession = sessionSel.value;
+            sessionSel.innerHTML = '<option value="">-- اختر الجلسة --</option>';
+            sessions.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.name;
+                opt.innerText = `${s.name} (${s.status || 'unknown'})`;
+                sessionSel.appendChild(opt);
+            });
+            // Restore previous selection if it still exists
+            if (currentSession) sessionSel.value = currentSession;
+
+            // Render sessions list
+            list.innerHTML = sessions.map(s => {
+                const statusColor = s.status === 'WORKING' ? 'emerald' : s.status === 'SCAN_QR_CODE' ? 'amber' : s.status === 'STOPPED' ? 'slate' : 'rose';
+                const statusIcon = s.status === 'WORKING' ? 'fa-circle-check' : s.status === 'SCAN_QR_CODE' ? 'fa-qrcode' : s.status === 'STOPPED' ? 'fa-circle-stop' : 'fa-circle-xmark';
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50">
+                        <div class="w-10 h-10 rounded-full bg-${statusColor}-100 flex items-center justify-center">
+                            <i class="fa-solid ${statusIcon} text-${statusColor}-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-slate-800">${escapeHtml(s.name)}</p>
+                            <p class="text-xs text-slate-500">${escapeHtml(s.status || 'unknown')}${s.me ? ' — ' + escapeHtml(s.me.pushName || s.me.id || '') : ''}</p>
+                        </div>
+                        <button onclick="selectSession('${escapeHtml(s.name)}')" class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg font-bold">اختيار</button>
+                    </div>
+                `;
+            }).join('');
+            list.classList.remove('hidden');
+        } catch (err) {
+            loading.classList.add('hidden');
+            errorMsg.innerText = err.message || 'فشل الاتصال بالخادم';
+            errorDiv.classList.remove('hidden');
+        }
+    }
+
+    // ── Select a session from the list ──
+    function selectSession(name) {
+        document.getElementById('waha-session').value = name;
+        alert('تم اختيار الجلسة: ' + name);
     }
 
     // ── Save settings ──
@@ -183,7 +247,6 @@
             waha_session: document.getElementById('waha-session').value || 'default',
             waha_sender_phone: document.getElementById('waha-phone').value,
         };
-        // Only send token if user entered a new value
         const tokenVal = document.getElementById('waha-token').value;
         if (tokenVal && !tokenVal.includes('****')) {
             payload.waha_api_token = tokenVal;
@@ -192,7 +255,6 @@
         try {
             const { data, error } = await window.db.apiRequest('PUT', '/whatsapp/settings', payload);
             if (error) throw error;
-            // Clear token field after save
             document.getElementById('waha-token').value = '';
             if (data && data.waha_api_token_set) {
                 document.getElementById('waha-token').placeholder = '•••••••• (محفوظ)';
@@ -228,7 +290,6 @@
         }
 
         try {
-            // Save
             const { data: saveData, error: saveError } = await window.db.apiRequest('PUT', '/whatsapp/settings', payload);
             if (saveError) throw saveError;
             document.getElementById('waha-token').value = '';
@@ -237,7 +298,6 @@
                 document.getElementById('token-status').innerText = '✓ رمز API محفوظ';
                 document.getElementById('token-status').className = 'text-xs text-emerald-600 mt-1';
             }
-            // Test
             const { data: testData, error: testError } = await window.db.apiRequest('POST', '/whatsapp/test');
             if (testError) throw testError;
             if (testData.success) {
@@ -271,7 +331,7 @@
     // ── Refresh connection status ──
     async function refreshStatus() {
         const banner = document.getElementById('status-banner');
-        if (!banner) return; // Page navigated away — stop polling
+        if (!banner) return;
         const iconWrap = document.getElementById('status-icon-wrap');
         const icon = document.getElementById('status-icon');
         const title = document.getElementById('status-title');
@@ -317,88 +377,6 @@
         }
     }
 
-    // ── Start session ──
-    async function startSession() {
-        const btn = document.getElementById('btn-start-session');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التشغيل...';
-        btn.disabled = true;
-
-        try {
-            const { data, error } = await window.db.apiRequest('POST', '/whatsapp/session/start');
-            if (error) throw error;
-            if (data.success) {
-                alert('✅ تم طلب بدء الجلسة. اضغط "عرض QR" لربط الرقم.');
-                setTimeout(() => refreshStatus(), 2000);
-            } else {
-                alert('❌ فشل: ' + (data.error || 'خطأ'));
-            }
-        } catch (err) {
-            alert('❌ خطأ: ' + (err.message || 'فشل'));
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-
-    // ── Stop session ──
-    async function stopSession() {
-        if (!confirm('إيقاف جلسة واتساب؟')) return;
-        const btn = document.getElementById('btn-stop-session');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الإيقاف...';
-        btn.disabled = true;
-
-        try {
-            const { data, error } = await window.db.apiRequest('POST', '/whatsapp/session/stop');
-            if (error) throw error;
-            if (data.success) {
-                alert('✅ تم إيقاف الجلسة.');
-                refreshStatus();
-            } else {
-                alert('❌ فشل: ' + (data.error || 'خطأ'));
-            }
-        } catch (err) {
-            alert('❌ خطأ: ' + (err.message || 'فشل'));
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
-
-    // ── Load QR code ──
-    async function loadQR() {
-        const placeholder = document.getElementById('qr-placeholder');
-        const image = document.getElementById('qr-image');
-        const errorDiv = document.getElementById('qr-error');
-        const loading = document.getElementById('qr-loading');
-        const errorMsg = document.getElementById('qr-error-msg');
-
-        placeholder.classList.add('hidden');
-        image.classList.add('hidden');
-        errorDiv.classList.add('hidden');
-        loading.classList.remove('hidden');
-
-        try {
-            const { data, error } = await window.db.apiRequest('GET', '/whatsapp/qr');
-            if (error) throw error;
-
-            loading.classList.add('hidden');
-
-            if (data.success && data.qr) {
-                image.src = data.qr;
-                image.classList.remove('hidden');
-            } else {
-                errorMsg.innerText = data.error || 'فشل تحميل QR. تأكد من بدء الجلسة أولاً.';
-                errorDiv.classList.remove('hidden');
-            }
-        } catch (err) {
-            loading.classList.add('hidden');
-            errorMsg.innerText = err.message || 'فشل الاتصال';
-            errorDiv.classList.remove('hidden');
-        }
-    }
-
     // ── Send test message ──
     async function sendTestMessage() {
         const phone = document.getElementById('test-phone').value;
@@ -440,14 +418,19 @@
         }
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     // ── Init page ──
     async function initWhatsappSettings() {
         if (window.hasPerm && !window.hasPerm('users', 'view')) {
             return alert('غير مصرح لك بعرض إعدادات واتساب.');
         }
         await loadSettings();
+        await loadSessions();
         await refreshStatus();
-        // Poll status every 30s — stored on window for SPA cleanup
         window._whatsappStatusInterval = setInterval(() => refreshStatus(), 30000);
     }
 
@@ -459,9 +442,8 @@
     window.saveAndTest = saveAndTest;
     window.testConnection = testConnection;
     window.refreshStatus = refreshStatus;
-    window.startSession = startSession;
-    window.stopSession = stopSession;
-    window.loadQR = loadQR;
+    window.loadSessions = loadSessions;
+    window.selectSession = selectSession;
     window.sendTestMessage = sendTestMessage;
 
     initWhatsappSettings();

@@ -55,19 +55,44 @@
 .rtl-flip {
     transform: scaleX(-1);
 }
-/* ÊÚÏíá ÔÇãá áßá ÇáÜ Popups İí ÇáÓíÓÊã */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ Popups ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+/* ===== Global Modal System (Tailwind-based) ===== */
+/* Ensures modals are centered, scrollable, and above all content */
+.modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding: 2rem 1rem !important;
+    overflow-y: auto !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.modal-overlay > div {
+    margin: auto 0 !important;
+    max-height: none !important;
+}
+
+@media (max-height: 700px) {
+    .modal-overlay {
+        padding: 0.5rem !important;
+    }
+}
+
 .ant-modal {
     margin: 0 auto; /* Added to center horizontally */
-    width: 85% !important; /* ÚÑÖ ãäÇÓÈ áßá ÇáÔÇÔÇÊ */
+    width: 85% !important; /* ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     max-width: 1300px !important;
-    top: 30px !important; /* ãÓÇİÉ ÈÓíØÉ ãä ÇáÃÚáì */
+    top: 30px !important; /* ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     padding-bottom: 30px !important;
     position: relative;
     border-radius: 12px;
 }
 
 .ant-modal-content {
-    /* ÅÌÈÇÑ ÇáÈæÈ ÃÈ Úáì ÃÎĞ 90% ãä Øæá ÇáÔÇÔÉ */
+    /* ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ 90% ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     height: 90vh !important; 
     display: flex !important;
     flex-direction: column !important;
@@ -114,12 +139,12 @@
 
 .ant-modal-body {
     flex: 1 !important;
-    overflow-y: auto !important; /* ÊİÚíá ÇáÓßÑæá áæ ÇáÈíÇäÇÊ ßÊíÑ */
+    overflow-y: auto !important; /* ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ */
     padding: 30px !important;
     background-color: #f8fafc;
 }
 
-/* áÖãÇä ÊæÇİŞ ÇáÊÕãíã ãÚ ÇáÔÇÔÇÊ ÇáÕÛíÑÉ */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 @media (max-height: 700px) {
     .ant-modal-content {
         height: 95vh !important;

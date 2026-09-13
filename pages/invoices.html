@@ -14,6 +14,9 @@
             <button onclick="openRecipientModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
                 <i class="fa-solid fa-bell ml-1"></i> المستلمون للتنبيهات
             </button>
+            <button onclick="openCategoryModal()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-tags ml-1"></i> التصنيفات
+            </button>
         </div>
     </div>
 
@@ -119,7 +122,7 @@
 </div>
 
 <!-- Invoice Modal -->
-<div id="invoice-modal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden items-center justify-center p-4">
+<div id="invoice-modal" class="modal-overlay hidden">
     <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
         <div class="p-4 bg-amber-600 text-white font-bold flex items-center justify-between flex-shrink-0">
             <span id="invoice-modal-title">إضافة فاتورة دورية</span>
@@ -225,7 +228,7 @@
 </div>
 
 <!-- Payment Modal -->
-<div id="payment-modal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden items-center justify-center p-4">
+<div id="payment-modal" class="modal-overlay hidden">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
         <div class="p-4 bg-emerald-600 text-white font-bold flex items-center justify-between flex-shrink-0">
             <span>تسجيل دفعة</span>
@@ -280,7 +283,7 @@
 </div>
 
 <!-- Recipient Modal -->
-<div id="recipient-modal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden items-center justify-center p-4">
+<div id="recipient-modal" class="modal-overlay hidden">
     <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
         <div class="p-4 bg-indigo-600 text-white font-bold flex items-center justify-between flex-shrink-0">
             <span>المستلمون لتنبيهات الفواتير</span>
@@ -317,18 +320,59 @@
     </div>
 </div>
 
+<!-- Category Management Modal -->
+<div id="category-modal" class="modal-overlay hidden">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+        <div class="p-4 bg-slate-600 text-white font-bold flex items-center justify-between flex-shrink-0">
+            <span><i class="fa-solid fa-tags ml-2"></i> إدارة تصنيفات الفواتير</span>
+            <button onclick="closeCategoryModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-5 overflow-y-auto flex-1">
+            <div class="flex gap-2 mb-4">
+                <input id="cat-name" class="flex-1 border border-slate-200 rounded-lg px-3 py-2" placeholder="اسم التصنيف (إنجليزي)">
+                <input id="cat-name-ar" class="flex-1 border border-slate-200 rounded-lg px-3 py-2" placeholder="الاسم بالعربية">
+            </div>
+            <div class="flex gap-2 mb-4">
+                <input id="cat-icon" class="flex-1 border border-slate-200 rounded-lg px-3 py-2" placeholder="أيقونة (fa-bolt)">
+                <input id="cat-color" class="flex-1 border border-slate-200 rounded-lg px-3 py-2" placeholder="اللون (amber)">
+                <button onclick="saveCategory()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-bold">
+                    <i class="fa-solid fa-plus ml-1"></i> إضافة
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm min-w-[400px]">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="px-3 py-2 font-semibold">الاسم</th>
+                            <th class="px-3 py-2 font-semibold">الأيقونة</th>
+                            <th class="px-3 py-2 font-semibold">اللون</th>
+                            <th class="px-3 py-2 font-semibold">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="categories-tbody" class="divide-y divide-slate-50"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-100 flex justify-end flex-shrink-0">
+            <button onclick="closeCategoryModal()" class="px-4 py-2 rounded-lg font-bold text-slate-600 hover:bg-slate-100">إغلاق</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     let invoicesList = [];
     let paymentsList = [];
     let remindersList = [];
     let recipientsList = [];
     let companiesList = [];
+    let invoiceCategories = []; // loaded dynamically from API
     let currentPaymentFilter = '';
 
-    const CATEGORY_LABELS = {
-        electricity: 'كهرباء', internet: 'إنترنت', warehouse: 'مستودع',
-        rent: 'إيجار', gosi: 'تأمينات اجتماعية', water: 'مياه', other: 'أخرى'
-    };
     const CYCLE_LABELS = {
         monthly: 'شهرية', quarterly: 'ربع سنوية', semi_annual: 'نصف سنوية', annual: 'سنوية'
     };
@@ -339,6 +383,36 @@
         upcoming: 'bg-slate-100 text-slate-600', due: 'bg-amber-100 text-amber-700',
         overdue: 'bg-rose-100 text-rose-700', paid: 'bg-emerald-100 text-emerald-700'
     };
+
+    // Dynamic category label lookup (loaded from API)
+    function getCategoryLabel(key) {
+        const cat = invoiceCategories.find(c => c.name === key);
+        return cat ? (cat.name_ar || cat.name) : key;
+    }
+    function getCategoryIcon(key) {
+        const cat = invoiceCategories.find(c => c.name === key);
+        return cat ? cat.icon : 'fa-tag';
+    }
+
+    // ── Load categories from API ──
+    async function loadCategories() {
+        try {
+            const { data, error } = await window.db.apiRequest('GET', '/invoices/categories');
+            if (error) throw error;
+            invoiceCategories = data.data || [];
+            // Populate the category select
+            const sel = document.getElementById('inv-category');
+            sel.innerHTML = '';
+            invoiceCategories.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.innerText = (c.name_ar || c.name);
+                sel.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Load categories error:', err.message);
+        }
+    }
 
     window.switchInvoiceTab = function(tab) {
         ['invoices', 'payments', 'reminders'].forEach(t => {
@@ -370,7 +444,6 @@
     window.openInvoiceModal = function(invoice) {
         if (window.hasPerm && !window.hasPerm('invoices', 'add')) return alert('غير مصرح لك.');
         document.getElementById('invoice-modal').classList.remove('hidden');
-        document.getElementById('invoice-modal').classList.add('flex');
         document.getElementById('invoice-modal-title').innerText = invoice ? 'تعديل فاتورة' : 'إضافة فاتورة دورية';
 
         if (invoice) {
@@ -401,7 +474,6 @@
 
     window.closeInvoiceModal = function() {
         document.getElementById('invoice-modal').classList.add('hidden');
-        document.getElementById('invoice-modal').classList.remove('flex');
     };
 
     window.saveInvoice = async function() {
@@ -479,7 +551,6 @@
 
     window.openPaymentModal = function(payment) {
         document.getElementById('payment-modal').classList.remove('hidden');
-        document.getElementById('payment-modal').classList.add('flex');
         document.getElementById('pay-id').value = payment.id;
         document.getElementById('pay-invoice-title').value = payment.invoice_title || '-';
         document.getElementById('pay-due-amount').value = Number(payment.amount || 0).toLocaleString() + ' ر.س';
@@ -498,7 +569,6 @@
 
     window.closePaymentModal = function() {
         document.getElementById('payment-modal').classList.add('hidden');
-        document.getElementById('payment-modal').classList.remove('flex');
     };
 
     window.savePayment = async function() {
@@ -533,13 +603,11 @@
 
     window.openRecipientModal = function() {
         document.getElementById('recipient-modal').classList.remove('hidden');
-        document.getElementById('recipient-modal').classList.add('flex');
         loadRecipients();
     };
 
     window.closeRecipientModal = function() {
         document.getElementById('recipient-modal').classList.add('hidden');
-        document.getElementById('recipient-modal').classList.remove('flex');
         document.getElementById('recipient-form').reset();
         document.getElementById('rec-id').value = '';
     };
@@ -612,7 +680,7 @@
             tbody.innerHTML = invoicesList.map(inv => `
                 <tr class="hover:bg-slate-50">
                     <td class="p-4 font-bold">${inv.title || '-'}</td>
-                    <td class="p-4">${CATEGORY_LABELS[inv.category] || inv.category || '-'}</td>
+                    <td class="p-4">${getCategoryLabel(inv.category) || '-'}</td>
                     <td class="p-4">${CYCLE_LABELS[inv.cycle] || inv.cycle || '-'}</td>
                     <td class="p-4 font-mono">${Number(inv.amount || 0).toLocaleString()} ر.س</td>
                     <td class="p-4">${inv.next_due_date || '-'}</td>
@@ -741,7 +809,7 @@
         try {
             const { data, error } = await window.db.apiRequest('GET', '/companies');
             if (error) throw error;
-            companiesList = data || [];
+            companiesList = (data && data.data) ? data.data : (Array.isArray(data) ? data : []);
             const sel = document.getElementById('inv-company');
             sel.innerHTML = '<option value="">-- اختر المنشأة --</option>';
             companiesList.forEach(c => {
@@ -752,10 +820,76 @@
         }
     }
 
+    // ── Category Management ──
+    window.openCategoryModal = function() {
+        if (window.hasPerm && !window.hasPerm('invoices', 'edit')) return alert('غير مصرح لك.');
+        document.getElementById('category-modal').classList.remove('hidden');
+        renderCategories();
+    };
+
+    window.closeCategoryModal = function() {
+        document.getElementById('category-modal').classList.add('hidden');
+        document.getElementById('cat-name').value = '';
+        document.getElementById('cat-name-ar').value = '';
+        document.getElementById('cat-icon').value = '';
+        document.getElementById('cat-color').value = '';
+    };
+
+    function renderCategories() {
+        const tbody = document.getElementById('categories-tbody');
+        tbody.innerHTML = invoiceCategories.map(c => `
+            <tr>
+                <td class="p-3">${escapeHtml(c.name_ar || c.name)}</td>
+                <td class="p-3"><i class="fa-solid ${escapeHtml(c.icon)} text-slate-500"></i> <span class="text-xs text-slate-400">${escapeHtml(c.icon)}</span></td>
+                <td class="p-3"><span class="px-2 py-1 rounded text-xs bg-${escapeHtml(c.color)}-100 text-${escapeHtml(c.color)}-700">${escapeHtml(c.color)}</span></td>
+                <td class="p-3">
+                    <button onclick="deleteCategory('${c.id}')" class="text-rose-500 hover:text-rose-700 text-sm" title="حذف"><i class="fa-solid fa-trash-can"></i></button>
+                </td>
+            </tr>
+        `).join('') || '<tr><td colspan="4" class="p-6 text-center text-slate-400">لا توجد تصنيفات</td></tr>';
+    }
+
+    window.saveCategory = async function() {
+        const name = document.getElementById('cat-name').value.trim();
+        const nameAr = document.getElementById('cat-name-ar').value.trim();
+        const icon = document.getElementById('cat-icon').value.trim() || 'fa-tag';
+        const color = document.getElementById('cat-color').value.trim() || 'slate';
+
+        if (!name) return alert('أدخل اسم التصنيف');
+
+        try {
+            const { error } = await window.db.apiRequest('POST', '/invoices/categories', {
+                name, name_ar: nameAr, icon, color
+            });
+            if (error) throw error;
+            await loadCategories();
+            renderCategories();
+            document.getElementById('cat-name').value = '';
+            document.getElementById('cat-name-ar').value = '';
+            document.getElementById('cat-icon').value = '';
+            document.getElementById('cat-color').value = '';
+        } catch (err) {
+            alert('خطأ: ' + (err.message || 'فشل'));
+        }
+    };
+
+    window.deleteCategory = async function(id) {
+        if (!confirm('حذف هذا التصنيف؟')) return;
+        try {
+            const { error } = await window.db.apiRequest('DELETE', `/invoices/categories/${id}`);
+            if (error) throw error;
+            await loadCategories();
+            renderCategories();
+        } catch (err) {
+            alert('خطأ: ' + (err.message || 'فشل'));
+        }
+    };
+
     async function loadInvoicesModule() {
         if (window.hasPerm && !window.hasPerm('invoices', 'view')) {
             return alert('غير مصرح لك بعرض صفحة الفواتير.');
         }
+        await loadCategories();
         await loadCompaniesForInvoices();
         await loadInvoices();
         await loadStats();

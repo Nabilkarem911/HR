@@ -137,6 +137,36 @@ router.put('/settings', rbacMiddleware('users', 'view'), auditLog('settings'), a
 });
 
 // ═══════════════════════════════════════════════════════
+// GET /api/whatsapp/sessions — list all WAHA sessions
+// ═══════════════════════════════════════════════════════
+router.get('/sessions', rbacMiddleware('users', 'view'), async (req, res, next) => {
+  try {
+    const config = await loadWahaSettings();
+    const baseUrl = buildBaseUrl(config);
+    if (!baseUrl) {
+      return res.json({ data: { success: false, error: 'WAHA API URL not configured', sessions: [] } });
+    }
+
+    const headers = buildHeaders(config);
+    try {
+      const resp = await fetchWithTimeout(`${baseUrl}/api/sessions`, { method: 'GET', headers }, 10000);
+      if (!resp.ok) {
+        return res.json({ data: { success: false, error: `WAHA returned HTTP ${resp.status}`, sessions: [] } });
+      }
+      const text = await resp.text();
+      let sessions = null;
+      try { sessions = JSON.parse(text); } catch (_) {}
+      return res.json({ data: { success: true, sessions: sessions || [] } });
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return res.json({ data: { success: false, error: 'Connection timed out', sessions: [] } });
+      }
+      return res.json({ data: { success: false, error: err.message, sessions: [] } });
+    }
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════
 // POST /api/whatsapp/test — test connection to WAHA server
 // ═══════════════════════════════════════════════════════
 router.post('/test', rbacMiddleware('users', 'view'), async (req, res, next) => {
