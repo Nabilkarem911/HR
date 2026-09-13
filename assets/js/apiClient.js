@@ -70,7 +70,7 @@ async function apiRequest(method, path, body) {
             return { data: null, error: { message: errMsg, code: res.status === 409 ? '23505' : null } };
         }
 
-        return { data: json, error: null };
+        return { data: json && json.data !== undefined ? json.data : json, error: null };
     } catch (err) {
         return { data: null, error: { message: err.message || 'Network error' } };
     }

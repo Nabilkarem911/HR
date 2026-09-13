@@ -399,7 +399,7 @@
         try {
             const { data, error } = await window.db.apiRequest('GET', '/invoices/categories');
             if (error) throw error;
-            invoiceCategories = data.data || [];
+            invoiceCategories = data || [];
             // Populate the category select
             const sel = document.getElementById('inv-category');
             sel.innerHTML = '';
