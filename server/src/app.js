@@ -25,6 +25,9 @@ const attendanceRoutes = require('./routes/attendance');
 const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settings');
 const organizationRoutes = require('./routes/organization');
+const invoicesRoutes = require('./routes/invoices');
+const whatsappRoutes = require('./routes/whatsapp');
+const { startScheduler } = require('./services/scheduler');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -74,6 +77,8 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/organization', organizationRoutes);
+app.use('/api/invoices', invoicesRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // ── Serve Frontend Static Files ──
 const frontendPath = path.join(__dirname, '..', 'public');
@@ -113,6 +118,7 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`[Server] HR-Gpack API running on port ${PORT}`);
+    startScheduler();
   });
 }
 

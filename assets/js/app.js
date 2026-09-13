@@ -287,6 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         'compliance': 'compliance',
                         'assets': 'assets',
                         'vehicles': 'vehicles',
+                        'invoices': 'invoices',
+                        'whatsapp-settings': 'users',
                         'users': 'users'
                     };
 

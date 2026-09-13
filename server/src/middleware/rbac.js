@@ -12,6 +12,7 @@ const DEFAULT_PERMISSIONS = {
     vehicles: { view: true, add: true, edit: true, delete: true },
     users: { view: true, add: true, edit: true, delete: true },
     organization: { view: true, add: true, edit: true, delete: true },
+    invoices: { view: true, add: true, edit: true, delete: true, manage_payments: true, manage_recipients: true, send_reminders: true },
   },
   hr_manager: {
     dashboard: { view: true },
@@ -26,6 +27,7 @@ const DEFAULT_PERMISSIONS = {
     vehicles: { view: true, add: true, edit: true, delete: false },
     users: { view: true, add: false, edit: false, delete: false },
     organization: { view: true, add: true, edit: true, delete: false },
+    invoices: { view: true, add: true, edit: true, delete: false, manage_payments: true, manage_recipients: true, send_reminders: true },
   },
   branch_manager: {
     dashboard: { view: true },
@@ -40,6 +42,7 @@ const DEFAULT_PERMISSIONS = {
     vehicles: { view: true, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: true, add: false, edit: false, delete: false },
+    invoices: { view: true, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
   },
   viewer: {
     dashboard: { view: true },
@@ -54,6 +57,7 @@ const DEFAULT_PERMISSIONS = {
     vehicles: { view: true, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: true, add: false, edit: false, delete: false },
+    invoices: { view: true, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
   },
   employee: {
     dashboard: { view: false },
@@ -68,6 +72,7 @@ const DEFAULT_PERMISSIONS = {
     vehicles: { view: false, add: false, edit: false, delete: false },
     users: { view: false, add: false, edit: false, delete: false },
     organization: { view: false, add: false, edit: false, delete: false },
+    invoices: { view: false, add: false, edit: false, delete: false, manage_payments: false, manage_recipients: false, send_reminders: false },
   },
 };
 

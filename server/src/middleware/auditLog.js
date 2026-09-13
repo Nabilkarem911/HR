@@ -13,6 +13,7 @@ const MODULE_NAMES = {
   attendance: 'الحضور',
   settings: 'الإعدادات',
   organization: 'الهيكل التنظيمي',
+  invoices: 'الفواتير والمدفوعات',
 };
 
 const ACTION_NAMES = {
