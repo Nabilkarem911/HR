@@ -7,6 +7,7 @@
 
 const { query, queryAll, queryOne } = require('../config/db');
 const { sendWhatsAppMessage } = require('./wahaClient');
+const { formatDualDate, toISODate } = require('../utils/helpers');
 
 const CYCLE_MONTHS = {
   monthly: 1,
@@ -38,11 +39,40 @@ function buildCycleLabel(dueDate, cycle) {
   return `${monthName} ${year}`;
 }
 
-function addCycleMonths(date, cycle) {
-  const d = new Date(date);
+const pad2 = n => String(n).padStart(2, '0');
+
+function addCycleMonths(date, cycle, dueDay) {
+  const iso = date instanceof Date ? toISODate(date) : String(date);
+  const [dy, dm, dd] = iso.split('T')[0].split('-').map(Number);
   const months = CYCLE_MONTHS[cycle] || 1;
-  d.setMonth(d.getMonth() + months);
-  return d.toISOString().split('T')[0];
+  const totalMonths = dy * 12 + (dm - 1) + months;
+  const y = Math.floor(totalMonths / 12);
+  const m = totalMonths % 12;
+  const day = dueDay || dd;
+  const daysIn = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  // Clamp day-of-month for short months (e.g. day 31 -> Feb 28)
+  return `${y}-${pad2(m + 1)}-${pad2(Math.min(day, daysIn))}`;
+}
+
+// Compute the next occurrence of a day-of-month on/after `from` (YYYY-MM-DD or Date).
+// Uses UTC date parts to stay consistent with the codebase's `toISOString().split('T')[0]` convention.
+function nextDateForDay(day, from) {
+  const baseStr = from
+    ? String(from).split('T')[0]
+    : new Date().toISOString().split('T')[0];
+  const [by, bm, bd] = baseStr.split('-').map(Number);
+  const clamped = Math.min(Math.max(parseInt(day) || 1, 1), 31);
+  const daysIn = (yy, mm) => new Date(Date.UTC(yy, mm + 1, 0)).getUTCDate();
+  let y = by, m = bm - 1;
+  let dd = Math.min(clamped, daysIn(y, m));
+  let candidate = `${y}-${pad2(m + 1)}-${pad2(dd)}`;
+  if (candidate < baseStr) {
+    m += 1;
+    if (m > 11) { m = 0; y += 1; }
+    dd = Math.min(clamped, daysIn(y, m));
+    candidate = `${y}-${pad2(m + 1)}-${pad2(dd)}`;
+  }
+  return candidate;
 }
 
 // ── 1. Generate payment records for invoices whose next_due_date has arrived or is approaching ──
@@ -55,7 +85,7 @@ async function generateDuePayments() {
 
   // Find active invoices where next_due_date <= today + 2 days and no payment exists for that date
   const dueInvoices = await queryAll(
-    `SELECT id, company_id, title, amount, cycle, next_due_date
+    `SELECT id, company_id, title, amount, cycle, next_due_date, is_recurring, due_day
      FROM invoices
      WHERE status = 'active'
        AND next_due_date <= $1
@@ -69,31 +99,37 @@ async function generateDuePayments() {
 
   let generated = 0;
   for (const inv of dueInvoices) {
+    // pg returns DATE as a local-midnight Date — normalize to 'YYYY-MM-DD' before
+    // any comparison or arithmetic (a Date <= string comparison is always false,
+    // and toISOString() would shift the day back in UTC+N timezones).
+    const nextDue = toISODate(inv.next_due_date);
+
     // Check if a payment already exists for this due_date
     const existing = await queryOne(
       `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND due_date = $2`,
-      [inv.id, inv.next_due_date]
+      [inv.id, nextDue]
     );
     if (existing) {
       // Payment already generated; advance next_due_date only when due date has arrived
-      if (inv.next_due_date <= today) {
-        const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
+      // and the invoice is recurring (non-recurring invoices keep their due date)
+      if (nextDue <= today && inv.is_recurring !== false) {
+        const nextDate = addCycleMonths(nextDue, inv.cycle, inv.due_day);
         await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
       }
       continue;
     }
 
-    const isDue = inv.next_due_date <= today;
-    const cycleLabel = buildCycleLabel(inv.next_due_date, inv.cycle);
+    const isDue = nextDue <= today;
+    const cycleLabel = buildCycleLabel(nextDue, inv.cycle);
     await query(
       `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [inv.id, inv.company_id, cycleLabel, inv.next_due_date, inv.amount || 0, isDue ? 'due' : 'upcoming']
+      [inv.id, inv.company_id, cycleLabel, nextDue, inv.amount || 0, isDue ? 'due' : 'upcoming']
     );
 
-    // Only advance next_due_date when the due date has actually arrived
-    if (isDue) {
-      const nextDate = addCycleMonths(inv.next_due_date, inv.cycle);
+    // Only advance next_due_date when the due date has actually arrived and invoice recurs
+    if (isDue && inv.is_recurring !== false) {
+      const nextDate = addCycleMonths(nextDue, inv.cycle, inv.due_day);
       await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
     }
     generated++;
@@ -146,7 +182,8 @@ async function sendReminders() {
             (p.due_date - CURRENT_DATE) AS days_remaining
      FROM invoice_payments p
      JOIN invoices i ON p.invoice_id = i.id
-     WHERE p.status IN ('upcoming', 'due', 'overdue')
+     WHERE i.status = 'active'
+       AND p.status IN ('upcoming', 'due', 'overdue')
        AND (
          p.status IN ('due', 'overdue')
          OR (p.status = 'upcoming' AND (p.due_date - CURRENT_DATE) IN (1, 2))
@@ -175,7 +212,7 @@ async function sendReminders() {
     const daysRemaining = Number(p.days_remaining);
     const statusLabel = p.status === 'overdue' ? 'متأخرة' : daysRemaining === 0 ? 'مستحقة اليوم' : daysRemaining === 1 ? 'تستحق غداً' : 'تستحق بعد يومين';
     const amountFormatted = Number(p.amount || 0).toLocaleString();
-    const dueDateFormatted = new Date(p.due_date).toLocaleDateString('ar-SA');
+    const dueDateFormatted = formatDualDate(p.due_date);
 
     let message = `*تنبيه فاتورة ${statusLabel}*\n\n`;
     message += `*الفاتورة:* ${p.title}\n`;
@@ -296,4 +333,4 @@ function stopScheduler() {
   }
 }
 
-module.exports = { startScheduler, stopScheduler, runSchedulerTick, buildCycleLabel };
+module.exports = { startScheduler, stopScheduler, runSchedulerTick, buildCycleLabel, nextDateForDay, addCycleMonths };

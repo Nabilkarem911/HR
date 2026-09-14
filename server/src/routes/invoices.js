@@ -2,8 +2,9 @@ const express = require('express');
 const { query, queryOne, queryAll } = require('../config/db');
 const { rbacMiddleware } = require('../middleware/rbac');
 const { auditLog } = require('../middleware/auditLog');
-const { runSchedulerTick, buildCycleLabel } = require('../services/scheduler');
+const { runSchedulerTick, buildCycleLabel, nextDateForDay } = require('../services/scheduler');
 const { sendWhatsAppMessage } = require('../services/wahaClient');
+const { formatDualDate, toISODate } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ function requireCompanyScope(req, res) {
 router.get('/', async (req, res, next) => {
   try {
     if (!requireCompanyScope(req, res)) return;
-    const { status, category } = req.query;
+    const { status, category, search, date_from, date_to } = req.query;
     const where = [];
     const params = [];
 
@@ -46,6 +47,20 @@ router.get('/', async (req, res, next) => {
     if (category) {
       where.push(`i.category = $${params.length + 1}`);
       params.push(category);
+    }
+    if (search) {
+      where.push(`(i.title ILIKE $${params.length + 1} OR i.provider_name ILIKE $${params.length + 1}
+        OR i.billing_number ILIKE $${params.length + 1} OR i.sadad_number ILIKE $${params.length + 1}
+        OR i.account_number ILIKE $${params.length + 1})`);
+      params.push(`%${search}%`);
+    }
+    if (date_from && /^\d{4}-\d{2}-\d{2}$/.test(date_from)) {
+      where.push(`i.next_due_date >= $${params.length + 1}`);
+      params.push(date_from);
+    }
+    if (date_to && /^\d{4}-\d{2}-\d{2}$/.test(date_to)) {
+      where.push(`i.next_due_date <= $${params.length + 1}`);
+      params.push(date_to);
     }
 
     const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
@@ -422,8 +437,19 @@ router.post('/', rbacMiddleware('invoices', 'add'), auditLog('invoices'), async 
     if (!requireCompanyScope(req, res)) return;
     const b = req.body;
     const companyId = req.user.role === 'super_admin' ? (b.company_id || null) : req.user.company_id;
+    const isRecurring = b.is_recurring !== false; // default true for backward compatibility
+    const dueDay = b.due_day !== undefined && b.due_day !== null && b.due_day !== ''
+      ? Math.min(Math.max(parseInt(b.due_day) || 1, 1), 31) : null;
 
-    if (!b.title || !b.start_date || !b.next_due_date) {
+    // For recurring monthly invoices, derive next_due_date from due_day
+    // (computed from start_date if it's in the future, otherwise from today)
+    const today = new Date().toISOString().split('T')[0];
+    const isMonthlyRecurring = isRecurring && (b.cycle || 'monthly') === 'monthly';
+    const nextDueDate = (isMonthlyRecurring && dueDay)
+      ? nextDateForDay(dueDay, (b.start_date && b.start_date > today) ? b.start_date : null)
+      : b.next_due_date;
+
+    if (!b.title || !b.start_date || !nextDueDate) {
       return res.status(400).json({ error: 'title, start_date, next_due_date are required' });
     }
     if (b.cycle && !VALID_CYCLES.includes(b.cycle)) {
@@ -440,23 +466,23 @@ router.post('/', rbacMiddleware('invoices', 'add'), auditLog('invoices'), async 
     }
 
     const row = await queryOne(
-      `INSERT INTO invoices (company_id, title, category, provider_name, account_number, billing_number, sadad_number, amount, cycle, start_date, end_date, next_due_date, reminder_days_before, status, notes, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      `INSERT INTO invoices (company_id, title, category, provider_name, account_number, billing_number, sadad_number, amount, cycle, start_date, end_date, next_due_date, reminder_days_before, status, notes, created_by, is_recurring, due_day)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
       [
         companyId, b.title, b.category || 'other', b.provider_name || null,
         b.account_number || null, b.billing_number || null, b.sadad_number || null,
         b.amount || 0, b.cycle || 'monthly', b.start_date, b.end_date || null,
-        b.next_due_date, b.reminder_days_before || 3, b.status || 'active',
-        b.notes || null, req.user.id || null
+        nextDueDate, b.reminder_days_before || 3, b.status || 'active',
+        b.notes || null, req.user.id || null, isRecurring, dueDay
       ]
     );
     // Create the first payment record so stats show correctly
-    if (b.next_due_date) {
-      const cycleLabel = buildCycleLabel(new Date(b.next_due_date), b.cycle || 'monthly');
+    if (nextDueDate) {
+      const cycleLabel = buildCycleLabel(new Date(nextDueDate), b.cycle || 'monthly');
       await query(
         `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
-         VALUES ($1, $2, $3, $4, $5, 'upcoming')`,
-        [row.id, companyId, cycleLabel, b.next_due_date, b.amount || 0]
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [row.id, companyId, cycleLabel, nextDueDate, b.amount || 0, nextDueDate <= today ? 'due' : 'upcoming']
       );
     }
     res.status(201).json({ data: row });
@@ -488,6 +514,19 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
       return res.status(400).json({ error: 'Amount cannot be negative' });
     }
 
+    // Resolve recurrence fields
+    const isRecurring = b.is_recurring !== undefined ? b.is_recurring !== false : existing.is_recurring !== false;
+    const dueDay = b.due_day !== undefined
+      ? (b.due_day === null || b.due_day === '' ? null : Math.min(Math.max(parseInt(b.due_day) || 1, 1), 31))
+      : existing.due_day;
+    // For recurring monthly invoices, recompute next_due_date only when due_day changed
+    const effectiveCycle = b.cycle || existing.cycle;
+    let nextDueDate = b.next_due_date || existing.next_due_date;
+    const dueDayChanged = b.due_day !== undefined && dueDay !== existing.due_day;
+    if (isRecurring && effectiveCycle === 'monthly' && dueDay && dueDayChanged) {
+      nextDueDate = nextDateForDay(dueDay, null);
+    }
+
     const row = await queryOne(
       `UPDATE invoices SET
         title = COALESCE($1, title),
@@ -502,35 +541,40 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
         next_due_date = COALESCE($10, next_due_date),
         reminder_days_before = COALESCE($11, reminder_days_before),
         status = COALESCE($12, status),
-        notes = $13
+        notes = $13,
+        is_recurring = $15,
+        due_day = $16
        WHERE id = $14 RETURNING *`,
       [
         b.title || null, b.category || null, b.provider_name || null,
         b.account_number || null, b.billing_number || null, b.sadad_number || null,
         b.amount !== undefined ? b.amount : null, b.cycle || null,
-        b.end_date !== undefined ? b.end_date : null, b.next_due_date || null,
+        b.end_date !== undefined ? b.end_date : null, nextDueDate,
         b.reminder_days_before !== undefined ? b.reminder_days_before : null,
-        b.status || null, b.notes !== undefined ? b.notes : null, req.params.id
+        b.status || null, b.notes !== undefined ? b.notes : null, req.params.id,
+        isRecurring, dueDay
       ]
     );
     // Sync invoice_payments when next_due_date changes
-    if (b.next_due_date && b.next_due_date !== existing.next_due_date?.toISOString()?.split('T')[0]) {
-      const cycleLabel = buildCycleLabel(new Date(b.next_due_date), row.cycle);
+    // (toISODate uses local date parts — toISOString() would shift the day in UTC+N timezones)
+    const existingDue = toISODate(existing.next_due_date);
+    if (nextDueDate && nextDueDate !== existingDue) {
+      const cycleLabel = buildCycleLabel(new Date(nextDueDate), row.cycle);
       // Update existing unpaid payment or create new one
       const existingPayment = await queryOne(
         `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND status = 'upcoming' AND due_date = $2`,
-        [req.params.id, existing.next_due_date]
+        [req.params.id, existingDue]
       );
       if (existingPayment) {
         await query(
           `UPDATE invoice_payments SET due_date = $1, cycle_label = $2, amount = $3 WHERE id = $4`,
-          [b.next_due_date, cycleLabel, row.amount, existingPayment.id]
+          [nextDueDate, cycleLabel, row.amount, existingPayment.id]
         );
       } else {
         await query(
           `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
            VALUES ($1, $2, $3, $4, $5, 'upcoming')`,
-          [req.params.id, row.company_id, cycleLabel, b.next_due_date, row.amount]
+          [req.params.id, row.company_id, cycleLabel, nextDueDate, row.amount]
         );
       }
     }
@@ -613,6 +657,9 @@ router.post('/:id/send-reminder', rbacMiddleware('invoices', 'send_reminders'), 
     if (req.user.role !== 'super_admin' && inv.company_id !== req.user.company_id) {
       return res.status(403).json({ error: 'Access denied' });
     }
+    if (inv.status !== 'active') {
+      return res.status(400).json({ error: 'Cannot send reminders for a paused or closed invoice' });
+    }
 
     const payment = await queryOne(
       `SELECT * FROM invoice_payments WHERE invoice_id = $1 AND status IN ('upcoming','due','overdue') ORDER BY due_date ASC LIMIT 1`,
@@ -630,7 +677,7 @@ router.post('/:id/send-reminder', rbacMiddleware('invoices', 'send_reminders'), 
 
     const statusLabel = payment ? (payment.status === 'overdue' ? 'متأخرة' : 'مستحقة') : 'قادمة';
     const amountFormatted = Number(payment?.amount || inv.amount || 0).toLocaleString();
-    const dueDateFormatted = payment ? new Date(payment.due_date).toLocaleDateString('ar-SA') : new Date(inv.next_due_date).toLocaleDateString('ar-SA');
+    const dueDateFormatted = formatDualDate(payment ? payment.due_date : inv.next_due_date);
 
     let message = `*تنبيه فاتورة ${statusLabel}*\n\n`;
     message += `*الفاتورة:* ${inv.title}\n`;
