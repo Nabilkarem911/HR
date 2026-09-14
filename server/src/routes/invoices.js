@@ -10,7 +10,6 @@ const router = express.Router();
 
 // ── Allowed enum values ──
 const VALID_CYCLES = ['monthly', 'quarterly', 'semi_annual', 'annual'];
-const VALID_CATEGORIES = ['electricity', 'internet', 'warehouse', 'rent', 'gosi', 'water', 'other'];
 const VALID_INVOICE_STATUS = ['active', 'paused', 'closed'];
 const VALID_PAYMENT_STATUS = ['upcoming', 'due', 'overdue', 'paid'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,6 +21,30 @@ function requireCompanyScope(req, res) {
     return false;
   }
   return true;
+}
+
+// Validate a category against the invoice_categories table (global + company-scoped).
+// Source of truth is the DB, NOT a hardcoded list — supports dynamic categories.
+// `allowExisting` lets PUT keep an invoice's current category even if it was later deactivated.
+async function validateCategory(req, category, companyId, allowExisting = false, existingCategory = null) {
+  if (!category) return true;
+  if (allowExisting && existingCategory && category === existingCategory) return true;
+  const scopeCompanyId = req.user.role === 'super_admin' ? null : companyId;
+  const row = await queryOne(
+    `SELECT id FROM invoice_categories
+     WHERE name = $1 AND is_active = true
+       AND (company_id IS NULL OR company_id IS NOT DISTINCT FROM $2)`,
+    [category, scopeCompanyId]
+  );
+  return !!row;
+}
+
+// Parse reminder_days_before preserving 0 (parseInt(x) || 3 would turn 0 into 3).
+function parseReminderDays(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return n;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -216,21 +239,31 @@ router.get('/stats', async (req, res, next) => {
       `SELECT COUNT(*) as count FROM invoice_payments p WHERE p.status = 'paid' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}`,
       params
     );
+    // Paid this month (current calendar month) — separate from the all-time `paid` count
+    const paidMonthRes = await queryOne(
+      `SELECT COUNT(*) as count FROM invoice_payments p
+       WHERE p.status = 'paid' AND p.paid_date >= date_trunc('month', CURRENT_DATE)
+       ${whereClause ? 'AND ' + whereClause.substring(6) : ''}`,
+      params
+    );
 
     stats.upcoming = parseInt(upcomingRes.count) || 0;
     stats.due = parseInt(dueRes.count) || 0;
     stats.overdue = parseInt(overdueRes.count) || 0;
     stats.paid = parseInt(paidRes.count) || 0;
+    stats.paid_this_month = parseInt(paidMonthRes.count) || 0;
 
     res.json({ data: stats });
   } catch (err) { next(err); }
 });
 
 // ── GET /api/invoices/payments/all ──
+// Supports comma-separated ?status=upcoming,due,overdue (work queue) or ?status=paid (archive).
+// Each value is validated against VALID_PAYMENT_STATUS — no pseudo-statuses accepted.
 router.get('/payments/all', async (req, res, next) => {
   try {
     if (!requireCompanyScope(req, res)) return;
-    const { status } = req.query;
+    const { status, search, payment_method, paid_from, paid_to } = req.query;
     const where = [];
     const params = [];
     if (req.user.role !== 'super_admin') {
@@ -238,18 +271,48 @@ router.get('/payments/all', async (req, res, next) => {
       params.push(req.user.company_id);
     }
     if (status) {
-      where.push(`p.status = $${params.length + 1}`);
-      params.push(status);
+      const statuses = String(status).split(',').map(s => s.trim()).filter(Boolean);
+      const invalid = statuses.find(s => !VALID_PAYMENT_STATUS.includes(s));
+      if (invalid) return res.status(400).json({ error: `Invalid payment status: ${invalid}` });
+      if (statuses.length === 1) {
+        where.push(`p.status = $${params.length + 1}`);
+        params.push(statuses[0]);
+      } else {
+        where.push(`p.status = ANY($${params.length + 1})`);
+        params.push(statuses);
+      }
+    }
+    // Archive filters (additive, parameterized — no SQL injection)
+    if (payment_method) {
+      where.push(`p.payment_method = $${params.length + 1}`);
+      params.push(payment_method);
+    }
+    if (paid_from) {
+      where.push(`p.paid_date >= $${params.length + 1}`);
+      params.push(paid_from);
+    }
+    if (paid_to) {
+      where.push(`p.paid_date <= $${params.length + 1}`);
+      params.push(paid_to);
+    }
+    if (search) {
+      where.push(`(i.title ILIKE $${params.length + 1} OR i.billing_number ILIKE $${params.length + 1} OR i.sadad_number ILIKE $${params.length + 1} OR p.payment_ref ILIKE $${params.length + 1})`);
+      params.push(`%${search}%`);
     }
     const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
+    // Archive (paid) sorts by paid_date DESC; work queue sorts by due_date ASC (most urgent first)
+    const isArchive = status === 'paid';
+    const orderBy = isArchive ? 'p.paid_date DESC NULLS LAST, p.due_date DESC' : 'p.due_date ASC, p.status DESC';
     const rows = await queryAll(
       `SELECT p.*, i.title as invoice_title, i.category, i.provider_name, i.billing_number, i.sadad_number,
-        c.name as company_name
+        c.name as company_name,
+        u.full_name as paid_by_name
        FROM invoice_payments p
        JOIN invoices i ON p.invoice_id = i.id
        LEFT JOIN companies c ON p.company_id = c.id
+       LEFT JOIN system_users u ON p.paid_by = u.id
        ${whereClause}
-       ORDER BY p.due_date DESC`,
+       ORDER BY ${orderBy}`,
       params
     );
     res.json({ data: rows });
@@ -276,12 +339,20 @@ router.put('/payments/:paymentId', rbacMiddleware('invoices', 'manage_payments')
     let paidAmount = existing.paid_amount;
     let paymentRef = existing.payment_ref;
     let paymentMethod = existing.payment_method;
+    let paidBy = existing.paid_by;
 
     if (status === 'paid') {
       paidDate = b.paid_date || new Date().toISOString().split('T')[0];
       paidAmount = b.paid_amount !== undefined ? b.paid_amount : existing.amount;
       paymentRef = b.payment_ref !== undefined ? b.payment_ref : paymentRef;
       paymentMethod = b.payment_method || paymentMethod;
+      // Record who registered the payment (only when transitioning to paid)
+      if (existing.status !== 'paid') {
+        paidBy = req.user.id || null;
+      }
+    } else if (existing.status === 'paid' && status !== 'paid') {
+      // Reverting a paid payment back to unpaid — clear paid fields
+      paidBy = null;
     }
 
     // Validate non-negative amounts
@@ -291,9 +362,9 @@ router.put('/payments/:paymentId', rbacMiddleware('invoices', 'manage_payments')
 
     const row = await queryOne(
       `UPDATE invoice_payments SET
-        status = $1, paid_date = $2, paid_amount = $3, payment_ref = $4, payment_method = $5, notes = $6
-       WHERE id = $7 RETURNING *`,
-      [status, paidDate, paidAmount, paymentRef, paymentMethod, b.notes !== undefined ? b.notes : existing.notes, req.params.paymentId]
+        status = $1, paid_date = $2, paid_amount = $3, payment_ref = $4, payment_method = $5, notes = $6, paid_by = $7
+       WHERE id = $8 RETURNING *`,
+      [status, paidDate, paidAmount, paymentRef, paymentMethod, b.notes !== undefined ? b.notes : existing.notes, paidBy, req.params.paymentId]
     );
     res.json({ data: row });
   } catch (err) { next(err); }
@@ -455,14 +526,18 @@ router.post('/', rbacMiddleware('invoices', 'add'), auditLog('invoices'), async 
     if (b.cycle && !VALID_CYCLES.includes(b.cycle)) {
       return res.status(400).json({ error: 'Invalid cycle' });
     }
-    if (b.category && !VALID_CATEGORIES.includes(b.category)) {
-      return res.status(400).json({ error: 'Invalid category' });
+    if (b.category && !(await validateCategory(req, b.category, companyId))) {
+      return res.status(400).json({ error: 'Invalid or inactive category' });
     }
     if (b.status && !VALID_INVOICE_STATUS.includes(b.status)) {
       return res.status(400).json({ error: 'Invalid invoice status' });
     }
     if (b.amount !== undefined && b.amount !== null && Number(b.amount) < 0) {
       return res.status(400).json({ error: 'Amount cannot be negative' });
+    }
+    const reminderDays = parseReminderDays(b.reminder_days_before, 3);
+    if (reminderDays < 0 || reminderDays > 30) {
+      return res.status(400).json({ error: 'reminder_days_before must be between 0 and 30' });
     }
 
     const row = await queryOne(
@@ -472,7 +547,7 @@ router.post('/', rbacMiddleware('invoices', 'add'), auditLog('invoices'), async 
         companyId, b.title, b.category || 'other', b.provider_name || null,
         b.account_number || null, b.billing_number || null, b.sadad_number || null,
         b.amount || 0, b.cycle || 'monthly', b.start_date, b.end_date || null,
-        nextDueDate, b.reminder_days_before || 3, b.status || 'active',
+        nextDueDate, reminderDays, b.status || 'active',
         b.notes || null, req.user.id || null, isRecurring, dueDay
       ]
     );
@@ -504,14 +579,23 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
     if (b.cycle && !VALID_CYCLES.includes(b.cycle)) {
       return res.status(400).json({ error: 'Invalid cycle' });
     }
-    if (b.category && !VALID_CATEGORIES.includes(b.category)) {
-      return res.status(400).json({ error: 'Invalid category' });
+    // Dynamic category: reject new/changed categories not in invoice_categories.
+    // Keep the invoice's existing category even if it was later deactivated (no forced migration of old data).
+    if (b.category && b.category !== existing.category
+        && !(await validateCategory(req, b.category, existing.company_id, false))) {
+      return res.status(400).json({ error: 'Invalid or inactive category' });
     }
     if (b.status && !VALID_INVOICE_STATUS.includes(b.status)) {
       return res.status(400).json({ error: 'Invalid invoice status' });
     }
     if (b.amount !== undefined && b.amount !== null && Number(b.amount) < 0) {
       return res.status(400).json({ error: 'Amount cannot be negative' });
+    }
+    if (b.reminder_days_before !== undefined && b.reminder_days_before !== null && b.reminder_days_before !== '') {
+      const rd = Number(b.reminder_days_before);
+      if (!Number.isFinite(rd) || rd < 0 || rd > 30) {
+        return res.status(400).json({ error: 'reminder_days_before must be between 0 and 30' });
+      }
     }
 
     // Resolve recurrence fields
@@ -550,25 +634,43 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
         b.account_number || null, b.billing_number || null, b.sadad_number || null,
         b.amount !== undefined ? b.amount : null, b.cycle || null,
         b.end_date !== undefined ? b.end_date : null, nextDueDate,
-        b.reminder_days_before !== undefined ? b.reminder_days_before : null,
+        b.reminder_days_before !== undefined
+          ? (b.reminder_days_before === null || b.reminder_days_before === '' ? null : Number(b.reminder_days_before))
+          : null,
         b.status || null, b.notes !== undefined ? b.notes : null, req.params.id,
         isRecurring, dueDay
       ]
     );
-    // Sync invoice_payments when next_due_date changes
+    // ── Amount sync policy ──
+    // When the invoice amount changes, propagate to UPCOMING payments only.
+    // due/overdue/paid payments are frozen (they have financial state).
+    let amountSync = null;
+    if (b.amount !== undefined && b.amount !== null && Number(b.amount) !== Number(existing.amount)) {
+      const upd = await query(
+        `UPDATE invoice_payments SET amount = $1
+         WHERE invoice_id = $2 AND status = 'upcoming'`,
+        [b.amount, req.params.id]
+      );
+      const skipped = await queryOne(
+        `SELECT COUNT(*) as count FROM invoice_payments
+         WHERE invoice_id = $1 AND status IN ('due','overdue','paid')`,
+        [req.params.id]
+      );
+      amountSync = { updated: upd.rowCount, skipped_due_or_paid: parseInt(skipped.count) || 0 };
+    }
+    // Sync the matched upcoming payment's due_date/cycle_label when next_due_date changes
     // (toISODate uses local date parts — toISOString() would shift the day in UTC+N timezones)
     const existingDue = toISODate(existing.next_due_date);
     if (nextDueDate && nextDueDate !== existingDue) {
       const cycleLabel = buildCycleLabel(new Date(nextDueDate), row.cycle);
-      // Update existing unpaid payment or create new one
       const existingPayment = await queryOne(
         `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND status = 'upcoming' AND due_date = $2`,
         [req.params.id, existingDue]
       );
       if (existingPayment) {
         await query(
-          `UPDATE invoice_payments SET due_date = $1, cycle_label = $2, amount = $3 WHERE id = $4`,
-          [nextDueDate, cycleLabel, row.amount, existingPayment.id]
+          `UPDATE invoice_payments SET due_date = $1, cycle_label = $2 WHERE id = $3`,
+          [nextDueDate, cycleLabel, existingPayment.id]
         );
       } else {
         await query(
@@ -578,7 +680,7 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
         );
       }
     }
-    res.json({ data: row });
+    res.json({ data: row, amount_sync: amountSync });
   } catch (err) { next(err); }
 });
 
@@ -609,8 +711,9 @@ router.get('/:id/payments', async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     const rows = await queryAll(
-      `SELECT p.*, i.title as invoice_title FROM invoice_payments p
+      `SELECT p.*, i.title as invoice_title, u.full_name as paid_by_name FROM invoice_payments p
        JOIN invoices i ON p.invoice_id = i.id
+       LEFT JOIN system_users u ON p.paid_by = u.id
        WHERE p.invoice_id = $1 ORDER BY p.due_date DESC`,
       [req.params.id]
     );

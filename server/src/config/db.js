@@ -1,5 +1,11 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// Parse DATE (oid 1082) and TIMESTAMPTZ date-only use as plain 'YYYY-MM-DD' strings.
+// Without this, pg returns DATE as a JS Date interpreted in the client's local timezone,
+// which shifts the calendar day back by one when the process TZ differs from the DB TZ.
+types.setTypeParser(1082, val => val); // DATE → string
+types.setTypeParser(1114, val => val); // TIMESTAMP → string
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',

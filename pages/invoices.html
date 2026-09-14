@@ -35,7 +35,7 @@
             <p id="stat-overdue" class="text-3xl font-black text-rose-600 mt-2">0</p>
         </div>
         <div class="bg-white rounded-xl border border-emerald-100 shadow-sm p-5 bg-emerald-50">
-            <p class="text-emerald-600 text-sm font-bold">مدفوعة</p>
+            <p class="text-emerald-600 text-sm font-bold">مدفوعة هذا الشهر</p>
             <p id="stat-paid" class="text-3xl font-black text-emerald-600 mt-2">0</p>
         </div>
     </div>
@@ -48,6 +48,9 @@
             </button>
             <button onclick="switchInvoiceTab('payments')" id="tab-btn-payments" class="px-6 py-3 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-700">
                 <i class="fa-solid fa-money-check-dollar ml-1"></i> المدفوعات
+            </button>
+            <button onclick="switchInvoiceTab('archive')" id="tab-btn-archive" class="px-6 py-3 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-700">
+                <i class="fa-solid fa-box-archive ml-1"></i> الأرشيف
             </button>
             <button onclick="switchInvoiceTab('reminders')" id="tab-btn-reminders" class="px-6 py-3 font-bold text-slate-500 border-b-2 border-transparent hover:text-slate-700">
                 <i class="fa-solid fa-bell ml-1"></i> سجل التنبيهات
@@ -113,14 +116,14 @@
             </div>
         </div>
 
-        <!-- Tab: Payments -->
+        <!-- Tab: Payments (work queue — unpaid cycles only) -->
         <div id="tab-payments" class="p-5 hidden">
+            <p class="text-xs text-slate-400 mb-3">الدورات التي تحتاج إجراء الآن — المدفوعة تنتقل إلى الأرشيف</p>
             <div class="flex gap-2 mb-4 flex-wrap">
-                <button onclick="filterPayments('')" id="filter-all" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-slate-800 text-white">الكل</button>
+                <button onclick="filterPayments('upcoming,due,overdue')" id="filter-active" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-slate-800 text-white">قائمة العمل</button>
                 <button onclick="filterPayments('upcoming')" id="filter-upcoming" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">قادمة</button>
                 <button onclick="filterPayments('due')" id="filter-due" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-600 hover:bg-amber-200">مستحقة</button>
                 <button onclick="filterPayments('overdue')" id="filter-overdue" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-rose-100 text-rose-600 hover:bg-rose-200">متأخرة</button>
-                <button onclick="filterPayments('paid')" id="filter-paid" class="px-3 py-1.5 rounded-lg text-sm font-bold bg-emerald-100 text-emerald-600 hover:bg-emerald-200">مدفوعة</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-right text-sm min-w-[800px]">
@@ -131,11 +134,70 @@
                             <th class="px-4 py-3 font-semibold">تاريخ الاستحقاق</th>
                             <th class="px-4 py-3 font-semibold">المبلغ</th>
                             <th class="px-4 py-3 font-semibold">الحالة</th>
-                            <th class="px-4 py-3 font-semibold">تاريخ الدفع</th>
                             <th class="px-4 py-3 font-semibold">إجراءات</th>
                         </tr>
                     </thead>
                     <tbody id="payments-tbody" class="divide-y divide-slate-50"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab: Archive (paid cycles — reviewable history) -->
+        <div id="tab-archive" class="p-5 hidden">
+            <p class="text-xs text-slate-400 mb-3">الدورات المدفوعة — سجل قابل للمراجعة</p>
+            <div class="flex flex-wrap items-end gap-3 mb-4 p-4 bg-slate-50/60 border border-slate-100 rounded-xl">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">بحث</label>
+                    <input id="archive-search" type="text" placeholder="عنوان الفاتورة، المرجع..."
+                        class="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-white focus:outline-none focus:border-amber-500"
+                        oninput="debouncedLoadArchive()">
+                </div>
+                <div class="w-44">
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">الفاتورة</label>
+                    <select id="archive-invoice" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" onchange="loadArchive()">
+                        <option value="">كل الفواتير</option>
+                    </select>
+                </div>
+                <div class="w-40">
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">طريقة الدفع</label>
+                    <select id="archive-method" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" onchange="loadArchive()">
+                        <option value="">الكل</option>
+                        <option value="cash">نقدي</option>
+                        <option value="bank_transfer">تحويل بنكي</option>
+                        <option value="sadad">سداد</option>
+                        <option value="card">بطاقة</option>
+                        <option value="other">أخرى</option>
+                    </select>
+                </div>
+                <div class="w-40">
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">الدفع من</label>
+                    <input id="archive-date-from" type="date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" onchange="loadArchive()">
+                </div>
+                <div class="w-40">
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1">الدفع إلى</label>
+                    <input id="archive-date-to" type="date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white" onchange="loadArchive()">
+                </div>
+                <button onclick="resetArchiveFilters()" title="إعادة تعيين"
+                    class="px-3 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-500 hover:bg-slate-200">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm min-w-[900px]">
+                    <thead class="bg-slate-50 border-b border-slate-100 text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">الفاتورة</th>
+                            <th class="px-4 py-3 font-semibold">الدورة</th>
+                            <th class="px-4 py-3 font-semibold">تاريخ الاستحقاق</th>
+                            <th class="px-4 py-3 font-semibold">المبلغ</th>
+                            <th class="px-4 py-3 font-semibold">المدفوع</th>
+                            <th class="px-4 py-3 font-semibold">تاريخ الدفع</th>
+                            <th class="px-4 py-3 font-semibold">الطريقة</th>
+                            <th class="px-4 py-3 font-semibold">المرجع</th>
+                            <th class="px-4 py-3 font-semibold">بواسطة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="archive-tbody" class="divide-y divide-slate-50"></tbody>
                 </table>
             </div>
         </div>
@@ -496,7 +558,7 @@
     let recipientsList = [];
     let companiesList = [];
     let invoiceCategories = []; // loaded dynamically from API
-    let currentPaymentFilter = '';
+    let currentPaymentFilter = 'upcoming,due,overdue'; // work queue default (unpaid only)
 
     const CYCLE_LABELS = {
         monthly: 'شهرية', quarterly: 'ربع سنوية', semi_annual: 'نصف سنوية', annual: 'سنوية'
@@ -573,7 +635,7 @@
     }
 
     window.switchInvoiceTab = function(tab) {
-        ['invoices', 'payments', 'reminders'].forEach(t => {
+        ['invoices', 'payments', 'archive', 'reminders'].forEach(t => {
             document.getElementById('tab-' + t).classList.add('hidden');
             const btn = document.getElementById('tab-btn-' + t);
             btn.classList.remove('text-amber-600', 'border-amber-600');
@@ -584,18 +646,25 @@
         activeBtn.classList.add('text-amber-600', 'border-amber-600');
         activeBtn.classList.remove('text-slate-500', 'border-transparent');
         if (tab === 'payments') loadPayments();
+        if (tab === 'archive') loadArchive();
         if (tab === 'reminders') loadReminders();
     };
 
     window.filterPayments = function(status) {
         currentPaymentFilter = status;
-        document.querySelectorAll('[id^="filter-"]').forEach(b => {
+        ['active', 'upcoming', 'due', 'overdue'].forEach(s => {
+            const b = document.getElementById('filter-' + s);
+            if (!b) return;
             b.classList.remove('bg-slate-800', 'text-white');
             b.classList.add('bg-slate-100', 'text-slate-600');
         });
-        const btn = document.getElementById('filter-' + (status || 'all'));
-        btn.classList.add('bg-slate-800', 'text-white');
-        btn.classList.remove('bg-slate-100', 'text-slate-600');
+        // Map the comma-status work-queue filter to the 'active' button id
+        const btnId = status === 'upcoming,due,overdue' ? 'filter-active' : ('filter-' + status);
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.classList.add('bg-slate-800', 'text-white');
+            btn.classList.remove('bg-slate-100', 'text-slate-600');
+        }
         renderPayments();
     };
 
@@ -999,13 +1068,22 @@
                     <td class="p-4">${formatDate(inv.next_due_date)}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${inv.status === 'active' ? 'bg-emerald-100 text-emerald-700' : inv.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}">${inv.status === 'active' ? 'نشطة' : inv.status === 'paused' ? 'موقوفة' : 'مغلقة'}</span></td>
                     <td class="p-4 whitespace-nowrap" onclick="event.stopPropagation()">
+                        ${canEdit ? `<button onclick="viewInvoiceDetails('${inv.id}')" class="text-slate-600 hover:text-slate-800 ml-2" title="تفاصيل"><i class="fa-solid fa-circle-info"></i></button>` : ''}
                         ${canEdit ? `<button onclick="editInvoice('${inv.id}')" class="text-amber-600 hover:text-amber-800 ml-2" title="تعديل"><i class="fa-solid fa-edit"></i></button>` : ''}
-                        ${canPay ? `<button onclick="registerPaymentForInvoice('${inv.id}')" class="text-emerald-600 hover:text-emerald-800 ml-2" title="تسجيل دفعة"><i class="fa-solid fa-money-check-dollar"></i></button>` : ''}
+                        ${canEdit && inv.status !== 'closed' ? `<button onclick="toggleInvoiceStatus('${inv.id}','${inv.status}')" class="ml-2 ${inv.status === 'active' ? 'text-amber-600 hover:text-amber-800' : 'text-emerald-600 hover:text-emerald-800'}" title="${inv.status === 'active' ? 'إيقاف' : 'استئناف'}"><i class="fa-solid ${inv.status === 'active' ? 'fa-pause' : 'fa-play'}"></i></button>` : ''}
                         ${canRemind ? `<button onclick="sendReminder('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 ml-2" title="إرسال تنبيه"><i class="fa-solid fa-bell"></i></button>` : ''}
                         ${canDelete ? `<button onclick="deleteInvoice('${inv.id}')" class="text-rose-600 hover:text-rose-800" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </td>
                 </tr>
             `).join('');
+            // Populate the archive invoice dropdown from the loaded invoices list
+            const archiveSelect = document.getElementById('archive-invoice');
+            if (archiveSelect) {
+                const cur = archiveSelect.value;
+                archiveSelect.innerHTML = '<option value="">كل الفواتير</option>' +
+                    invoicesList.map(inv => `<option value="${escapeHtml(inv.id)}">${escapeHtml(inv.title)}</option>`).join('');
+                archiveSelect.value = cur;
+            }
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-rose-400">خطأ: ${escapeHtml(err.message)}</td></tr>`;
         }
@@ -1034,7 +1112,9 @@
         const tbody = document.getElementById('payments-tbody');
         tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
         try {
-            const { data, error } = await window.db.apiRequest('GET', '/invoices/payments/all');
+            // Work queue: fetch only unpaid cycles from the API (no pseudo-status; comma-list validated server-side)
+            const statusParam = currentPaymentFilter || 'upcoming,due,overdue';
+            const { data, error } = await window.db.apiRequest('GET', `/invoices/payments/all?status=${encodeURIComponent(statusParam)}`);
             if (error) throw error;
             paymentsList = data || [];
             renderPayments();
@@ -1046,14 +1126,13 @@
     function renderPayments() {
         const tbody = document.getElementById('payments-tbody');
         const canManage = !window.hasPerm || window.hasPerm('invoices', 'manage_payments');
-        const filtered = currentPaymentFilter ? paymentsList.filter(p => p.status === currentPaymentFilter) : paymentsList;
+        // Server already filtered by status; just render. (No client-side paid filtering needed.)
+        const filtered = paymentsList;
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400">لا توجد مدفوعات.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="py-10 text-center text-slate-400">لا توجد مدفوعات تحتاج إجراء.</td></tr>';
             return;
         }
         tbody.innerHTML = filtered.map((p, idx) => {
-            // Find the index in the full paymentsList (not filtered) for openPaymentModal
-            const globalIdx = paymentsList.indexOf(p);
             return `
             <tr class="hover:bg-slate-50">
                 <td class="p-4 font-bold">${escapeHtml(p.invoice_title) || '-'}</td>
@@ -1061,9 +1140,8 @@
                 <td class="p-4">${formatDate(p.due_date)}</td>
                 <td class="p-4 font-mono">${Number(p.amount || 0).toLocaleString()} ر.س</td>
                 <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[p.status] || 'bg-slate-100'}">${STATUS_LABELS[p.status] || p.status}</span></td>
-                <td class="p-4">${formatDate(p.paid_date)}</td>
                 <td class="p-4 whitespace-nowrap">
-                    ${canManage && p.status !== 'paid' ? `<button onclick="openPaymentModalByIdx(${globalIdx})" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-money-check-dollar"></i> تسجيل دفعة</button>` : ''}
+                    ${canManage && p.status !== 'paid' ? `<button onclick="openPaymentModalByIdx(${idx})" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-money-check-dollar"></i> تسجيل دفعة دورة ${escapeHtml(p.cycle_label) || ''}</button>` : ''}
                 </td>
             </tr>
             `;
@@ -1130,11 +1208,93 @@
             document.getElementById('stat-upcoming').innerText = data.upcoming || 0;
             document.getElementById('stat-due').innerText = data.due || 0;
             document.getElementById('stat-overdue').innerText = data.overdue || 0;
-            document.getElementById('stat-paid').innerText = data.paid || 0;
+            document.getElementById('stat-paid').innerText = data.paid_this_month || 0;
         } catch (err) {
             console.error('Stats error:', err.message);
         }
     }
+
+    // ── Archive: paid cycles only (reviewable history) ──
+    let archiveList = [];
+    let _archiveSearchTimer;
+
+    async function loadArchive() {
+        const tbody = document.getElementById('archive-tbody');
+        tbody.innerHTML = '<tr><td colspan="9" class="py-10 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+        try {
+            const search = document.getElementById('archive-search')?.value || '';
+            const method = document.getElementById('archive-method')?.value || '';
+            const dateFrom = document.getElementById('archive-date-from')?.value || '';
+            const dateTo = document.getElementById('archive-date-to')?.value || '';
+            const params = new URLSearchParams();
+            params.set('status', 'paid');
+            if (search) params.set('search', search);
+            if (method) params.set('payment_method', method);
+            if (dateFrom) params.set('paid_from', dateFrom);
+            if (dateTo) params.set('paid_to', dateTo);
+            const { data, error } = await window.db.apiRequest('GET', `/invoices/payments/all?${params.toString()}`);
+            if (error) throw error;
+            archiveList = data || [];
+            renderArchive();
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="9" class="py-10 text-center text-rose-400">خطأ: ${escapeHtml(err.message)}</td></tr>`;
+        }
+    }
+
+    function renderArchive() {
+        const tbody = document.getElementById('archive-tbody');
+        // Optional client-side invoice filter (dropdown)
+        const invFilter = document.getElementById('archive-invoice')?.value || '';
+        const filtered = invFilter ? archiveList.filter(p => p.invoice_id === invFilter) : archiveList;
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="py-10 text-center text-slate-400">لا توجد مدفوعات في الأرشيف.</td></tr>';
+            return;
+        }
+        const methodLabels = { cash: 'نقدي', bank_transfer: 'تحويل بنكي', sadad: 'سداد', card: 'بطاقة', other: 'أخرى' };
+        tbody.innerHTML = filtered.map(p => `
+            <tr class="hover:bg-slate-50">
+                <td class="p-4 font-bold">${escapeHtml(p.invoice_title) || '-'}</td>
+                <td class="p-4">${escapeHtml(p.cycle_label) || '-'}</td>
+                <td class="p-4">${formatDate(p.due_date)}</td>
+                <td class="p-4 font-mono">${Number(p.amount || 0).toLocaleString()} ر.س</td>
+                <td class="p-4 font-mono">${Number(p.paid_amount || 0).toLocaleString()} ر.س</td>
+                <td class="p-4">${formatDate(p.paid_date)}</td>
+                <td class="p-4">${escapeHtml(methodLabels[p.payment_method] || p.payment_method || '-')}</td>
+                <td class="p-4">${escapeHtml(p.payment_ref) || '-'}</td>
+                <td class="p-4">${escapeHtml(p.paid_by_name) || '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    window.loadArchive = loadArchive;
+    window.debouncedLoadArchive = function() {
+        clearTimeout(_archiveSearchTimer);
+        _archiveSearchTimer = setTimeout(() => loadArchive(), 350);
+    };
+    window.resetArchiveFilters = function() {
+        document.getElementById('archive-search').value = '';
+        document.getElementById('archive-invoice').value = '';
+        document.getElementById('archive-method').value = '';
+        document.getElementById('archive-date-from').value = '';
+        document.getElementById('archive-date-to').value = '';
+        loadArchive();
+    };
+
+    // ── Pause / resume an invoice (toggle status between active and paused) ──
+    window.toggleInvoiceStatus = async function(invoiceId, currentStatus) {
+        if (window.hasPerm && !window.hasPerm('invoices', 'edit')) return alert('غير مصرح لك.');
+        const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+        const label = newStatus === 'paused' ? 'إيقاف' : 'استئناف';
+        if (!confirm(`هل تريد ${label} هذه الفاتورة؟`)) return;
+        try {
+            const { error } = await window.db.apiRequest('PUT', `/invoices/${invoiceId}`, { status: newStatus });
+            if (error) throw error;
+            await loadInvoices();
+            await loadStats();
+        } catch (err) {
+            alert('خطأ: ' + err.message);
+        }
+    };
 
     async function loadCompaniesForInvoices() {
         if (window.currentUserRole !== 'super_admin') return;

@@ -5,7 +5,7 @@
    3. Send WhatsApp reminders via WAHA for due/overdue invoices
    ========================================================================== */
 
-const { query, queryAll, queryOne } = require('../config/db');
+const { pool, query, queryAll, queryOne } = require('../config/db');
 const { sendWhatsAppMessage } = require('./wahaClient');
 const { formatDualDate, toISODate } = require('../utils/helpers');
 
@@ -76,63 +76,93 @@ function nextDateForDay(day, from) {
 }
 
 // ── 1. Generate payment records for invoices whose next_due_date has arrived or is approaching ──
+// Catch-up capable: if the server was down for multiple cycles, all missed payments are created
+// in one tick (transactional per invoice). Respects start_date/end_date/is_recurring/due_day.
 async function generateDuePayments() {
   const today = new Date().toISOString().split('T')[0];
-  // Create payments for invoices due within 2 days (to enable pre-due reminders)
+  // 2-day lookahead so pre-due reminders can fire before the due date
   const lookaheadDate = new Date();
   lookaheadDate.setDate(lookaheadDate.getDate() + 2);
   const lookahead = lookaheadDate.toISOString().split('T')[0];
 
-  // Find active invoices where next_due_date <= today + 2 days and no payment exists for that date
+  // Active recurring invoices whose next_due_date is within the lookahead window.
+  // (Non-recurring invoices get exactly one payment, created at POST time — no catch-up.)
   const dueInvoices = await queryAll(
-    `SELECT id, company_id, title, amount, cycle, next_due_date, is_recurring, due_day
+    `SELECT id, company_id, title, amount, cycle, next_due_date, is_recurring, due_day,
+            start_date, end_date
      FROM invoices
      WHERE status = 'active'
+       AND is_recurring = true
        AND next_due_date <= $1
        AND (end_date IS NULL OR end_date >= $2)
      ORDER BY next_due_date ASC`,
     [lookahead, today]
   );
 
-  console.log(`[scheduler] generateDuePayments: today=${today}, lookahead=${lookahead}, found=${dueInvoices.length} invoices`);
-  dueInvoices.forEach(inv => console.log(`  - ${inv.title}: next_due=${inv.next_due_date}`));
+  console.log(`[scheduler] generateDuePayments: today=${today}, lookahead=${lookahead}, found=${dueInvoices.length} recurring invoices`);
+  dueInvoices.forEach(inv => console.log(`  - ${inv.title}: next_due=${toISODate(inv.next_due_date)}`));
 
   let generated = 0;
   for (const inv of dueInvoices) {
-    // pg returns DATE as a local-midnight Date — normalize to 'YYYY-MM-DD' before
-    // any comparison or arithmetic (a Date <= string comparison is always false,
-    // and toISOString() would shift the day back in UTC+N timezones).
-    const nextDue = toISODate(inv.next_due_date);
+    // Each invoice's catch-up runs in its own transaction so a failure mid-loop
+    // doesn't leave partial cycles for that invoice (other invoices are unaffected).
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Check if a payment already exists for this due_date
-    const existing = await queryOne(
-      `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND due_date = $2`,
-      [inv.id, nextDue]
-    );
-    if (existing) {
-      // Payment already generated; advance next_due_date only when due date has arrived
-      // and the invoice is recurring (non-recurring invoices keep their due date)
-      if (nextDue <= today && inv.is_recurring !== false) {
-        const nextDate = addCycleMonths(nextDue, inv.cycle, inv.due_day);
-        await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+      // Walk forward from the current next_due_date, creating a payment for every
+      // due cycle that has arrived (<= today). Stop at the first FUTURE due date,
+      // which becomes the new next_due_date. Also create the immediate upcoming
+      // cycle if it falls within the 2-day lookahead.
+      let cur = toISODate(inv.next_due_date);
+      const startDate = inv.start_date ? toISODate(inv.start_date) : null;
+      const endDate = inv.end_date ? toISODate(inv.end_date) : null;
+
+      while (true) {
+        // Respect start_date (never create a cycle before the invoice started)
+        if (startDate && cur < startDate) {
+          cur = addCycleMonths(cur, inv.cycle, inv.due_day);
+          continue;
+        }
+        // Respect end_date (no cycles after the invoice ended)
+        if (endDate && cur > endDate) break;
+
+        // Idempotency: skip if a payment already exists for this (invoice, due_date)
+        const exists = await client.query(
+          `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND due_date = $2`,
+          [inv.id, cur]
+        );
+        if (exists.rowCount === 0) {
+          const isDue = cur <= today;
+          const cycleLabel = buildCycleLabel(cur, inv.cycle);
+          await client.query(
+            `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [inv.id, inv.company_id, cycleLabel, cur, inv.amount || 0, isDue ? 'due' : 'upcoming']
+          );
+          generated++;
+        }
+
+        // Advance to the next cycle
+        const nxt = addCycleMonths(cur, inv.cycle, inv.due_day);
+        // Stop once we pass the lookahead window (next cycle is safely in the future)
+        if (nxt > lookahead) {
+          // Update next_due_date to the first future cycle (cur if still <= lookahead, else nxt)
+          const newNextDue = cur > today ? cur : nxt;
+          await client.query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [newNextDue, inv.id]);
+          break;
+        }
+        cur = nxt;
       }
-      continue;
-    }
 
-    const isDue = nextDue <= today;
-    const cycleLabel = buildCycleLabel(nextDue, inv.cycle);
-    await query(
-      `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [inv.id, inv.company_id, cycleLabel, nextDue, inv.amount || 0, isDue ? 'due' : 'upcoming']
-    );
-
-    // Only advance next_due_date when the due date has actually arrived and invoice recurs
-    if (isDue && inv.is_recurring !== false) {
-      const nextDate = addCycleMonths(nextDue, inv.cycle, inv.due_day);
-      await query(`UPDATE invoices SET next_due_date = $1 WHERE id = $2`, [nextDate, inv.id]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error(`[scheduler] catch-up failed for invoice ${inv.id} (${inv.title}):`, err.message);
+      throw err;
+    } finally {
+      client.release();
     }
-    generated++;
   }
 
   return generated;
@@ -170,11 +200,13 @@ async function updatePaymentStatuses() {
 async function sendReminders() {
   const today = new Date().toISOString().split('T')[0];
 
-  // Find payments that need reminders:
-  // - upcoming payments at 2 days or 1 day before due date
-  // - due payments (due today)
-  // - overdue payments (past due)
-  // An invoice has reminder_days_before; we remind when due_date - reminder_days_before <= today
+  // Find payments that need reminders, driven by each invoice's reminder_days_before:
+  //   - upcoming payments: remind when (due_date - today) <= reminder_days_before (and >= 0)
+  //   - due payments (due today): always remind
+  //   - overdue payments (past due): always remind
+  // reminder_days_before = 0  → only on the due date (no pre-due reminder)
+  // reminder_days_before = 7  → starts reminding 7 days before due date (daily nag until due)
+  // Dedup: at most one 'sent' reminder per (payment, day) — same-day repeats are skipped.
   const paymentsNeedingReminders = await queryAll(
     `SELECT p.id AS payment_id, p.invoice_id, p.cycle_label, p.due_date, p.amount, p.status,
             i.title, i.category, i.provider_name, i.billing_number, i.sadad_number,
@@ -186,7 +218,8 @@ async function sendReminders() {
        AND p.status IN ('upcoming', 'due', 'overdue')
        AND (
          p.status IN ('due', 'overdue')
-         OR (p.status = 'upcoming' AND (p.due_date - CURRENT_DATE) IN (1, 2))
+         OR (p.status = 'upcoming'
+             AND (p.due_date - CURRENT_DATE) BETWEEN 0 AND COALESCE(i.reminder_days_before, 3))
        )
        AND p.id NOT IN (
          SELECT payment_id FROM invoice_reminders
@@ -210,7 +243,11 @@ async function sendReminders() {
     if (!recipients.length) continue;
 
     const daysRemaining = Number(p.days_remaining);
-    const statusLabel = p.status === 'overdue' ? 'متأخرة' : daysRemaining === 0 ? 'مستحقة اليوم' : daysRemaining === 1 ? 'تستحق غداً' : 'تستحق بعد يومين';
+    let statusLabel;
+    if (p.status === 'overdue') statusLabel = 'متأخرة';
+    else if (daysRemaining === 0) statusLabel = 'مستحقة اليوم';
+    else if (daysRemaining === 1) statusLabel = 'تستحق غداً';
+    else statusLabel = `تستحق بعد ${daysRemaining} يوم`;
     const amountFormatted = Number(p.amount || 0).toLocaleString();
     const dueDateFormatted = formatDualDate(p.due_date);
 
