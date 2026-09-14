@@ -163,10 +163,10 @@ async function sendReminders() {
   let failed = 0;
 
   for (const p of paymentsNeedingReminders) {
-    // Get active recipients for this company
+    // Get active recipients for this company (or global recipients if company_id is NULL)
     const recipients = await queryAll(
       `SELECT name, phone, role_label FROM invoice_recipients
-       WHERE company_id = $1 AND is_active = true`,
+       WHERE (company_id = $1 OR company_id IS NULL) AND is_active = true`,
       [p.company_id]
     );
 
@@ -296,4 +296,4 @@ function stopScheduler() {
   }
 }
 
-module.exports = { startScheduler, stopScheduler, runSchedulerTick };
+module.exports = { startScheduler, stopScheduler, runSchedulerTick, buildCycleLabel };

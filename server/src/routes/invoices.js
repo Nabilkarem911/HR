@@ -2,7 +2,7 @@ const express = require('express');
 const { query, queryOne, queryAll } = require('../config/db');
 const { rbacMiddleware } = require('../middleware/rbac');
 const { auditLog } = require('../middleware/auditLog');
-const { runSchedulerTick } = require('../services/scheduler');
+const { runSchedulerTick, buildCycleLabel } = require('../services/scheduler');
 const { sendWhatsAppMessage } = require('../services/wahaClient');
 
 const router = express.Router();
@@ -156,16 +156,57 @@ router.get('/stats', async (req, res, next) => {
 
     const stats = await queryOne(
       `SELECT
-        COUNT(*) FILTER (WHERE p.status = 'upcoming') as upcoming,
-        COUNT(*) FILTER (WHERE p.status = 'due') as due,
-        COUNT(*) FILTER (WHERE p.status = 'overdue') as overdue,
-        COUNT(*) FILTER (WHERE p.status = 'paid') as paid,
         COALESCE(SUM(p.amount) FILTER (WHERE p.status IN ('due','overdue')), 0) as total_due_amount,
         COALESCE(SUM(p.paid_amount) FILTER (WHERE p.status = 'paid'), 0) as total_paid_amount
        FROM invoice_payments p
        ${whereClause}`,
       params
     );
+
+    // Count upcoming: payments with status 'upcoming' + active invoices with future next_due_date (no payment yet)
+    const upcomingRes = await queryOne(
+      `SELECT COUNT(*) as count FROM (
+         SELECT p.id FROM invoice_payments p WHERE p.status = 'upcoming' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}
+         UNION ALL
+         SELECT i.id FROM invoices i WHERE i.status = 'active' AND i.next_due_date > CURRENT_DATE ${whereClause ? 'AND ' + whereClause.substring(6).replace(/p\./g, 'i.') : ''}
+           AND NOT EXISTS (SELECT 1 FROM invoice_payments p2 WHERE p2.invoice_id = i.id AND p2.due_date = i.next_due_date)
+       ) t`,
+      params
+    );
+
+    // Count due: payments with status 'due' + active invoices due today (no payment yet)
+    const dueRes = await queryOne(
+      `SELECT COUNT(*) as count FROM (
+         SELECT p.id FROM invoice_payments p WHERE p.status = 'due' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}
+         UNION ALL
+         SELECT i.id FROM invoices i WHERE i.status = 'active' AND i.next_due_date = CURRENT_DATE ${whereClause ? 'AND ' + whereClause.substring(6).replace(/p\./g, 'i.') : ''}
+           AND NOT EXISTS (SELECT 1 FROM invoice_payments p2 WHERE p2.invoice_id = i.id AND p2.due_date = i.next_due_date)
+       ) t`,
+      params
+    );
+
+    // Count overdue: payments with status 'overdue' + active invoices past due (no payment yet)
+    const overdueRes = await queryOne(
+      `SELECT COUNT(*) as count FROM (
+         SELECT p.id FROM invoice_payments p WHERE p.status = 'overdue' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}
+         UNION ALL
+         SELECT i.id FROM invoices i WHERE i.status = 'active' AND i.next_due_date < CURRENT_DATE ${whereClause ? 'AND ' + whereClause.substring(6).replace(/p\./g, 'i.') : ''}
+           AND NOT EXISTS (SELECT 1 FROM invoice_payments p2 WHERE p2.invoice_id = i.id AND p2.due_date = i.next_due_date)
+       ) t`,
+      params
+    );
+
+    // Count paid: only from payments
+    const paidRes = await queryOne(
+      `SELECT COUNT(*) as count FROM invoice_payments p WHERE p.status = 'paid' ${whereClause ? 'AND ' + whereClause.substring(6) : ''}`,
+      params
+    );
+
+    stats.upcoming = parseInt(upcomingRes.count) || 0;
+    stats.due = parseInt(dueRes.count) || 0;
+    stats.overdue = parseInt(overdueRes.count) || 0;
+    stats.paid = parseInt(paidRes.count) || 0;
+
     res.json({ data: stats });
   } catch (err) { next(err); }
 });
@@ -409,6 +450,15 @@ router.post('/', rbacMiddleware('invoices', 'add'), auditLog('invoices'), async 
         b.notes || null, req.user.id || null
       ]
     );
+    // Create the first payment record so stats show correctly
+    if (b.next_due_date) {
+      const cycleLabel = buildCycleLabel(new Date(b.next_due_date), b.cycle || 'monthly');
+      await query(
+        `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
+         VALUES ($1, $2, $3, $4, $5, 'upcoming')`,
+        [row.id, companyId, cycleLabel, b.next_due_date, b.amount || 0]
+      );
+    }
     res.status(201).json({ data: row });
   } catch (err) { next(err); }
 });
@@ -463,6 +513,27 @@ router.put('/:id', rbacMiddleware('invoices', 'edit'), auditLog('invoices'), asy
         b.status || null, b.notes !== undefined ? b.notes : null, req.params.id
       ]
     );
+    // Sync invoice_payments when next_due_date changes
+    if (b.next_due_date && b.next_due_date !== existing.next_due_date?.toISOString()?.split('T')[0]) {
+      const cycleLabel = buildCycleLabel(new Date(b.next_due_date), row.cycle);
+      // Update existing unpaid payment or create new one
+      const existingPayment = await queryOne(
+        `SELECT id FROM invoice_payments WHERE invoice_id = $1 AND status = 'upcoming' AND due_date = $2`,
+        [req.params.id, existing.next_due_date]
+      );
+      if (existingPayment) {
+        await query(
+          `UPDATE invoice_payments SET due_date = $1, cycle_label = $2, amount = $3 WHERE id = $4`,
+          [b.next_due_date, cycleLabel, row.amount, existingPayment.id]
+        );
+      } else {
+        await query(
+          `INSERT INTO invoice_payments (invoice_id, company_id, cycle_label, due_date, amount, status)
+           VALUES ($1, $2, $3, $4, $5, 'upcoming')`,
+          [req.params.id, row.company_id, cycleLabel, b.next_due_date, row.amount]
+        );
+      }
+    }
     res.json({ data: row });
   } catch (err) { next(err); }
 });
@@ -494,7 +565,9 @@ router.get('/:id/payments', async (req, res, next) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     const rows = await queryAll(
-      `SELECT * FROM invoice_payments WHERE invoice_id = $1 ORDER BY due_date DESC`,
+      `SELECT p.*, i.title as invoice_title FROM invoice_payments p
+       JOIN invoices i ON p.invoice_id = i.id
+       WHERE p.invoice_id = $1 ORDER BY p.due_date DESC`,
       [req.params.id]
     );
     res.json({ data: rows });
@@ -542,12 +615,12 @@ router.post('/:id/send-reminder', rbacMiddleware('invoices', 'send_reminders'), 
     }
 
     const payment = await queryOne(
-      `SELECT * FROM invoice_payments WHERE invoice_id = $1 AND status IN ('due','overdue') ORDER BY due_date DESC LIMIT 1`,
+      `SELECT * FROM invoice_payments WHERE invoice_id = $1 AND status IN ('upcoming','due','overdue') ORDER BY due_date ASC LIMIT 1`,
       [req.params.id]
     );
 
     const recipients = await queryAll(
-      `SELECT name, phone, role_label FROM invoice_recipients WHERE company_id = $1 AND is_active = true`,
+      `SELECT name, phone, role_label FROM invoice_recipients WHERE (company_id = $1 OR company_id IS NULL) AND is_active = true`,
       [inv.company_id]
     );
 

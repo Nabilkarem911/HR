@@ -384,6 +384,26 @@
         overdue: 'bg-rose-100 text-rose-700', paid: 'bg-emerald-100 text-emerald-700'
     };
 
+    // Format ISO date to readable format (ar-SA localized)
+    function formatDate(iso) {
+        if (!iso) return '-';
+        try {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch { return iso; }
+    }
+
+    // Format ISO date to YYYY-MM-DD for input fields
+    function toDateInput(iso) {
+        if (!iso) return '';
+        try {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return String(iso).split('T')[0];
+            return d.toISOString().split('T')[0];
+        } catch { return String(iso).split('T')[0]; }
+    }
+
     // Dynamic category label lookup (loaded from API)
     function getCategoryLabel(key) {
         const cat = invoiceCategories.find(c => c.name === key);
@@ -457,9 +477,9 @@
             document.getElementById('inv-amount').value = invoice.amount || '';
             document.getElementById('inv-cycle').value = invoice.cycle || 'monthly';
             document.getElementById('inv-reminder-days').value = invoice.reminder_days_before || 3;
-            document.getElementById('inv-start-date').value = invoice.start_date || '';
-            document.getElementById('inv-next-due').value = invoice.next_due_date || '';
-            document.getElementById('inv-end-date').value = invoice.end_date || '';
+            document.getElementById('inv-start-date').value = toDateInput(invoice.start_date);
+            document.getElementById('inv-next-due').value = toDateInput(invoice.next_due_date);
+            document.getElementById('inv-end-date').value = toDateInput(invoice.end_date);
             document.getElementById('inv-status').value = invoice.status || 'active';
             document.getElementById('inv-notes').value = invoice.notes || '';
             if (invoice.company_id) document.getElementById('inv-company').value = invoice.company_id;
@@ -534,6 +554,20 @@
             await loadStats();
         } catch (err) {
             alert('خطأ: ' + (err.message || 'فشل الحذف'));
+        }
+    };
+
+    // Open payment modal for the next unpaid payment of an invoice
+    window.registerPaymentForInvoice = async function(invoiceId) {
+        if (window.hasPerm && !window.hasPerm('invoices', 'manage_payments')) return alert('غير مصرح لك.');
+        try {
+            const { data, error } = await window.db.apiRequest('GET', `/invoices/${invoiceId}/payments`);
+            if (error) throw error;
+            const unpaid = (data || []).find(p => ['upcoming', 'due', 'overdue'].includes(p.status));
+            if (!unpaid) return alert('لا توجد دفعات غير مدفوعة لهذه الفاتورة.');
+            openPaymentModal(unpaid);
+        } catch (err) {
+            alert('خطأ: ' + (err.message || 'فشل تحميل الدفعات'));
         }
     };
 
@@ -669,6 +703,7 @@
         const canEdit = !window.hasPerm || window.hasPerm('invoices', 'edit');
         const canDelete = !window.hasPerm || window.hasPerm('invoices', 'delete');
         const canRemind = !window.hasPerm || window.hasPerm('invoices', 'send_reminders');
+        const canPay = !window.hasPerm || window.hasPerm('invoices', 'manage_payments');
         try {
             const { data, error } = await window.db.apiRequest('GET', '/invoices');
             if (error) throw error;
@@ -683,12 +718,13 @@
                     <td class="p-4">${getCategoryLabel(inv.category) || '-'}</td>
                     <td class="p-4">${CYCLE_LABELS[inv.cycle] || inv.cycle || '-'}</td>
                     <td class="p-4 font-mono">${Number(inv.amount || 0).toLocaleString()} ر.س</td>
-                    <td class="p-4">${inv.next_due_date || '-'}</td>
+                    <td class="p-4">${formatDate(inv.next_due_date)}</td>
                     <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${inv.status === 'active' ? 'bg-emerald-100 text-emerald-700' : inv.status === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}">${inv.status === 'active' ? 'نشطة' : inv.status === 'paused' ? 'موقوفة' : 'مغلقة'}</span></td>
                     <td class="p-4 whitespace-nowrap">
-                        ${canEdit ? `<button onclick="editInvoice('${inv.id}')" class="text-amber-600 hover:text-amber-800 ml-2"><i class="fa-solid fa-edit"></i></button>` : ''}
+                        ${canEdit ? `<button onclick="editInvoice('${inv.id}')" class="text-amber-600 hover:text-amber-800 ml-2" title="تعديل"><i class="fa-solid fa-edit"></i></button>` : ''}
+                        ${canPay ? `<button onclick="registerPaymentForInvoice('${inv.id}')" class="text-emerald-600 hover:text-emerald-800 ml-2" title="تسجيل دفعة"><i class="fa-solid fa-money-check-dollar"></i></button>` : ''}
                         ${canRemind ? `<button onclick="sendReminder('${inv.id}')" class="text-indigo-600 hover:text-indigo-800 ml-2" title="إرسال تنبيه"><i class="fa-solid fa-bell"></i></button>` : ''}
-                        ${canDelete ? `<button onclick="deleteInvoice('${inv.id}')" class="text-rose-600 hover:text-rose-800"><i class="fa-solid fa-trash"></i></button>` : ''}
+                        ${canDelete ? `<button onclick="deleteInvoice('${inv.id}')" class="text-rose-600 hover:text-rose-800" title="حذف"><i class="fa-solid fa-trash"></i></button>` : ''}
                     </td>
                 </tr>
             `).join('');
@@ -725,10 +761,10 @@
             <tr class="hover:bg-slate-50">
                 <td class="p-4 font-bold">${p.invoice_title || '-'}</td>
                 <td class="p-4">${p.cycle_label || '-'}</td>
-                <td class="p-4">${p.due_date || '-'}</td>
+                <td class="p-4">${formatDate(p.due_date)}</td>
                 <td class="p-4 font-mono">${Number(p.amount || 0).toLocaleString()} ر.س</td>
                 <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[p.status] || 'bg-slate-100'}">${STATUS_LABELS[p.status] || p.status}</span></td>
-                <td class="p-4">${p.paid_date || '-'}</td>
+                <td class="p-4">${formatDate(p.paid_date)}</td>
                 <td class="p-4 whitespace-nowrap">
                     ${canManage && p.status !== 'paid' ? `<button onclick="openPaymentModalByIdx(${globalIdx})" class="text-emerald-600 hover:text-emerald-800"><i class="fa-solid fa-money-check-dollar"></i> تسجيل دفعة</button>` : ''}
                 </td>
