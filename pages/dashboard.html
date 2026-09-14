@@ -37,10 +37,10 @@
     </div>
 
     <!-- Top KPI Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <!-- Total Employees -->
-        <div
-            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-indigo-300 hover:shadow-md transition-all">
+        <div onclick="location.hash='employee-profile'" role="link" tabindex="0" title="فتح ملف الموظفين"
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer">
             <div>
                 <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">إجمالي القوة العاملة</p>
                 <h3 class="text-3xl font-black text-slate-800" id="kpi-emps">
@@ -54,8 +54,8 @@
         </div>
 
         <!-- Payroll Estimate -->
-        <div
-            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-emerald-300 hover:shadow-md transition-all">
+        <div onclick="location.hash='payroll'" role="link" tabindex="0" title="فتح مسير الرواتب"
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer">
             <div>
                 <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">توقعات الرواتب الأساسية</p>
                 <h3 class="text-3xl font-black text-slate-800 flex items-baseline gap-1" id="kpi-payroll">
@@ -69,8 +69,8 @@
         </div>
 
         <!-- Compliance Health -->
-        <div
-            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-rose-300 hover:shadow-md transition-all">
+        <div onclick="location.hash='compliance'" role="link" tabindex="0" title="فتح الامتثال والوثائق"
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-rose-300 hover:shadow-md transition-all cursor-pointer">
             <div>
                 <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">مؤشر الامتثال (منتهي / حرج)</p>
                 <h3 class="text-3xl font-black text-slate-800" id="kpi-compliance">
@@ -83,8 +83,25 @@
             </div>
         </div>
 
+        <!-- Invoices Due Alert -->
+        <div onclick="location.hash='invoices'" role="link" tabindex="0" title="فتح الفواتير والمدفوعات"
+            class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-amber-300 hover:shadow-md transition-all cursor-pointer">
+            <div>
+                <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide">فواتير مستحقة / متأخرة</p>
+                <h3 class="text-3xl font-black text-slate-800" id="kpi-invoices">
+                    <i class="fa-solid fa-spinner fa-spin text-slate-300 text-xl"></i>
+                </h3>
+                <p class="text-[11px] text-amber-600 font-bold mt-1" id="kpi-invoices-sub"></p>
+            </div>
+            <div
+                class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-2xl group-hover:scale-110 group-hover:bg-amber-500 group-hover:text-white transition-all shadow-sm">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+        </div>
+
         <!-- Active Branches -->
-        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden"
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-300 hover:shadow-md transition-all relative overflow-hidden cursor-pointer"
+            onclick="location.hash='companies'" role="link" tabindex="0" title="فتح المنشآت والفروع"
             id="kpi-branches-card">
             <div class="relative z-10">
                 <p class="text-xs font-bold text-slate-400 mb-1 tracking-wide" id="kpi-branches-label">الفروع النشطة</p>
@@ -99,12 +116,29 @@
         </div>
     </div>
 
+    <!-- Upcoming Invoices (Top Priority) -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice-dollar text-amber-500"></i> فواتير قريبة الاستحقاق
+            </h3>
+            <a href="#invoices" class="text-xs font-bold text-amber-600 hover:text-amber-800 bg-amber-50 px-4 py-2 rounded-xl border border-amber-100 transition-colors shadow-sm">فتح الفواتير والمدفوعات <i class="fa-solid fa-arrow-left mr-1"></i></a>
+        </div>
+        <div id="upcoming-invoices-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1 p-2">
+            <div class="text-center py-8 text-slate-400 col-span-full">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i>
+                <span class="text-sm">جاري التحميل...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content Split Layout -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 align-top items-start">
 
         <!-- Right Column (2/3): Compliance Radar -->
         <div class="xl:col-span-2 space-y-6">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col cursor-pointer group/radar"
+                onclick="if(!event.target.closest('a')) location.hash='compliance'" role="link" tabindex="0" title="فتح الامتثال والوثائق">
                 <div
                     class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 items-center justify-between">
                     <h3 class="font-bold text-slate-800 flex items-center gap-2">
@@ -144,7 +178,8 @@
         <!-- Left Column (1/3): Chart & Quick Actions -->
         <div class="space-y-6">
             <!-- Mini Chart -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 cursor-pointer"
+                onclick="location.hash='compliance'" role="link" tabindex="0" title="فتح الامتثال والوثائق">
                 <h3 class="font-bold text-slate-800 flex items-center gap-2 mb-4">
                     <i class="fa-solid fa-chart-donut text-indigo-500"></i> حالة الامتثال الكلية
                 </h3>
@@ -156,21 +191,6 @@
                             <i class="fa-solid fa-box-open text-2xl text-slate-300"></i>
                         </div>
                         <p class="text-xs text-slate-400 font-bold">لا يوجد بيانات للرسم البياني</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Audit Log (Sensitive Actions) -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-clipboard-list text-rose-500"></i> سجل العمليات الحساسة
-                    </h3>
-                    <span class="text-[11px] text-slate-400 font-bold" id="audit-log-status">جاري التحميل...</span>
-                </div>
-                <div class="space-y-2" id="audit-log-list">
-                    <div class="text-sm text-slate-400 py-4 text-center">
-                        <i class="fa-solid fa-circle-notch fa-spin ml-1"></i> جاري تحميل السجل...
                     </div>
                 </div>
             </div>
@@ -215,20 +235,24 @@
                     </a>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Upcoming Invoices -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-file-invoice-dollar text-amber-500"></i> فواتير قريبة الاستحقاق
-                    </h3>
-                    <a href="#invoices" class="text-xs font-bold text-amber-600 hover:text-amber-800">عرض الكل <i class="fa-solid fa-arrow-left"></i></a>
-                </div>
-                <div id="upcoming-invoices-list" class="divide-y divide-slate-50">
-                    <div class="text-center py-8 text-slate-400">
-                        <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i>
-                        <span class="text-sm">جاري التحميل...</span>
-                    </div>
+    <!-- Audit Log (Sensitive Actions) — collapsed by default, at page end -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <button type="button" onclick="toggleAuditLog()"
+            class="w-full p-5 flex items-center justify-between gap-3 text-right hover:bg-slate-50/60 transition-colors">
+            <span class="font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-list text-rose-500"></i> سجل العمليات الحساسة
+                <span class="text-[11px] text-slate-400 font-bold" id="audit-log-status">اضغط للعرض</span>
+            </span>
+            <i class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200"
+                id="audit-log-chevron"></i>
+        </button>
+        <div id="audit-log-body" class="hidden border-t border-slate-100">
+            <div class="p-5 pt-4 space-y-2" id="audit-log-list">
+                <div class="text-sm text-slate-400 py-4 text-center">
+                    <i class="fa-solid fa-circle-notch fa-spin ml-1"></i> جاري تحميل السجل...
                 </div>
             </div>
         </div>
@@ -238,6 +262,15 @@
 <script>
     let complianceChartInstance = null;
     let globalUserCompanyCache = null;
+    let auditLogLoaded = false;
+
+    // Format ISO date to readable ar-SA format
+    function formatInvDate(iso) {
+        if (!iso) return '-';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return iso;
+        return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
 
     // Orchestrator
     async function initIntelligenceDashboard() {
@@ -249,7 +282,7 @@
             fetchKPIPayroll(),
             fetchKPIBranches(),
             fetchComplianceAndRadar(),
-            fetchAuditLogPreview(),
+            fetchInvoiceAlert(),
             fetchUpcomingInvoices()
         ]);
     }
@@ -533,6 +566,39 @@
         });
     }
 
+    // KPI: Invoices due/overdue alert card (next to compliance)
+    async function fetchInvoiceAlert() {
+        const el = document.getElementById('kpi-invoices');
+        const subEl = document.getElementById('kpi-invoices-sub');
+        if (!el) return;
+        try {
+            const { data, error } = await apiRequest('GET', '/invoices/stats');
+            if (error) throw error;
+            const urgent = (Number(data.due) || 0) + (Number(data.overdue) || 0);
+            el.innerText = urgent;
+            el.classList.toggle('text-rose-600', urgent > 0);
+            el.classList.toggle('text-slate-800', urgent === 0);
+            if (subEl) {
+                const upcoming = Number(data.upcoming) || 0;
+                subEl.innerText = upcoming > 0 ? `+ ${upcoming} قادمة` : 'لا توجد مستحقة';
+            }
+        } catch (e) {
+            el.innerText = 'N/A';
+        }
+    }
+
+    // Audit log toggle — collapsed by default, lazy-loads on first expand
+    window.toggleAuditLog = function () {
+        const body = document.getElementById('audit-log-body');
+        const chevron = document.getElementById('audit-log-chevron');
+        const nowHidden = body.classList.toggle('hidden');
+        if (chevron) chevron.classList.toggle('rotate-180', !nowHidden);
+        if (!nowHidden && !auditLogLoaded) {
+            auditLogLoaded = true;
+            fetchAuditLogPreview();
+        }
+    };
+
     async function fetchAuditLogPreview() {
         const listEl = document.getElementById('audit-log-list');
         const statusEl = document.getElementById('audit-log-status');
@@ -597,7 +663,7 @@
             }).sort((a, b) => new Date(a.next_due_date) - new Date(b.next_due_date)).slice(0, 10);
 
             if (!rows.length) {
-                listEl.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-check-circle text-emerald-400 text-2xl mb-2 block"></i><span class="text-sm">لا توجد فواتير قريبة الاستحقاق</span></div>`;
+                listEl.innerHTML = `<div class="text-center py-8 text-slate-400 col-span-full"><i class="fa-solid fa-check-circle text-emerald-400 text-2xl mb-2 block"></i><span class="text-sm">لا توجد فواتير قريبة الاستحقاق</span></div>`;
                 return;
             }
 
@@ -612,7 +678,10 @@
 
                 let badgeClass = 'bg-emerald-50 text-emerald-600 border-emerald-200';
                 let timeText = `باقي ${diffDays} يوم`;
-                if (diffDays <= 0) {
+                if (diffDays < 0) {
+                    badgeClass = 'bg-rose-50 text-rose-600 border-rose-200';
+                    timeText = `متأخرة ${Math.abs(diffDays)} يوم`;
+                } else if (diffDays === 0) {
                     badgeClass = 'bg-rose-50 text-rose-600 border-rose-200';
                     timeText = 'مستحقة اليوم';
                 } else if (diffDays <= 2) {
@@ -620,13 +689,13 @@
                 }
 
                 return `
-                    <a href="#invoices" class="flex items-center gap-3 p-3 hover:bg-slate-50 transition-colors group">
-                        <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <a href="#invoices" class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group border border-transparent hover:border-slate-200">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors flex-shrink-0">
                             <i class="fa-solid fa-file-invoice"></i>
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="font-bold text-slate-800 text-sm truncate">${title}</p>
-                            <p class="text-xs text-slate-500 mt-0.5">${amount} ر.س — ${inv.next_due_date}</p>
+                            <p class="text-xs text-slate-500 mt-0.5">${amount} ر.س — ${formatInvDate(inv.next_due_date)}</p>
                         </div>
                         <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${badgeClass} whitespace-nowrap">${timeText}</span>
                     </a>
@@ -634,20 +703,22 @@
             }).join('');
         } catch (e) {
             console.error('Upcoming invoices error:', e.message);
-            listEl.innerHTML = `<div class="text-center py-8 text-slate-400"><i class="fa-solid fa-triangle-exclamation text-amber-400 text-2xl mb-2 block"></i><span class="text-sm">تعذر تحميل الفواتير</span></div>`;
+            listEl.innerHTML = `<div class="text-center py-8 text-slate-400 col-span-full"><i class="fa-solid fa-triangle-exclamation text-amber-400 text-2xl mb-2 block"></i><span class="text-sm">تعذر تحميل الفواتير</span></div>`;
         }
     }
 
     document.getElementById('master-company-filter')?.addEventListener('change', () => {
         // Re-trigger parallel loads
-        Promise.all([
+        const jobs = [
             fetchKPIEmployees(),
             fetchKPIPayroll(),
             fetchKPIBranches(),
             fetchComplianceAndRadar(),
-            fetchAuditLogPreview(),
+            fetchInvoiceAlert(),
             fetchUpcomingInvoices()
-        ]);
+        ];
+        if (auditLogLoaded) jobs.push(fetchAuditLogPreview());
+        Promise.all(jobs);
     });
 
     // Call init
