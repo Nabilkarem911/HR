@@ -1011,6 +1011,9 @@
         }
     }
 
+    // Export for inline onchange handlers (page scripts run inside an IIFE — only window.* are global)
+    window.loadInvoices = loadInvoices;
+
     // Debounced reload for the search input
     let _invSearchTimer = null;
     window.debouncedLoadInvoices = function() {
